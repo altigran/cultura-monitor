@@ -1,0 +1,11 @@
+# URLs de videos REAIS do TikTok para semear o mockup.
+# O fetcher pula silenciosamente qualquer URL invalida/removida.
+# Adicione as suas e rode:  python3 tools/fetch.py --file tools/seed_urls.txt
+https://www.tiktok.com/@zachking/video/6768504823336815877
+https://www.tiktok.com/@scout2015/video/6718335390845095173
+https://www.tiktok.com/@looooooooch/video/7441916545665600776
+https://www.tiktok.com/@zachking/video/6749520780411293957
+https://www.tiktok.com/@khaby.lame/video/7105861992422180614
+https://www.tiktok.com/@bellapoarch/video/6862153058223197445
+https://www.tiktok.com/@gordonramsayofficial/video/7012710295621913862
+https://www.tiktok.com/@nasa/video/7012345678901234567

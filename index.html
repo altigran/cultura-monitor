@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cultura Monitor — Curadoria & Análise</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Barra superior preta -->
+  <header class="appbar">
+    <div class="appbar-left">
+      <span class="brand-badge">☺</span>
+      <span class="brand-name">Cultura Monitor <small>v1</small></span>
+      <nav class="crumbs">Configuração <span class="sep">›</span> Minha Conta</nav>
+    </div>
+    <div class="appbar-right">
+      <span class="live">live<b>.</b></span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <button class="nav" data-view="dashboard"><span class="i">▦</span> Dashboard</button>
+      <button class="nav is-active" data-view="timeline"><span class="i">≣</span> Timeline</button>
+      <button class="nav" data-view="curados"><span class="i">★</span> Curados <span class="navcount" id="count-curados">0</span></button>
+      <button class="nav" data-view="reports"><span class="i">⚑</span> Reports <span class="navcount" id="count-reports">0</span></button>
+    </aside>
+
+    <!-- Conteúdo -->
+    <main class="content">
+      <div class="content-head">
+        <div>
+          <h1 id="view-title">TimeLine</h1>
+          <p id="view-sub" class="muted">Confira os posts recentes</p>
+        </div>
+        <button class="btn-yellow" id="add-content">+ Adicionar Conteúdo</button>
+      </div>
+
+      <!-- Sub-abas + busca -->
+      <div class="subtabs" id="subtabs">
+        <button class="subtab is-active" data-view="timeline">Timeline <span class="badge" id="count-timeline">0</span></button>
+        <button class="subtab" data-view="curados">Conteúdos Curados</button>
+        <button class="subtab" data-view="reports">Conteúdos Reportados</button>
+        <div class="search-wrap">
+          <input id="search" type="search" placeholder="Pesquisar" />
+          <button class="btn-ok" id="search-btn">OK</button>
+        </div>
+      </div>
+
+      <!-- Linha de chips de filtro -->
+      <div class="chips-row">
+        <span class="chips-label">Filtros aplicados:</span>
+        <div class="chips" id="chips"></div>
+      </div>
+
+      <!-- Feed -->
+      <section id="grid" class="feed"></section>
+      <section id="dashboard" class="dash" hidden></section>
+      <p id="empty" class="empty" hidden></p>
+    </main>
+  </div>
+
+  <!-- Modal: salvar/curar -->
+  <div id="modal" class="modal" hidden>
+    <div class="modal-card">
+      <header class="modal-head">
+        <h2>Curar conteúdo</h2>
+        <button class="icon-btn" id="modal-close" aria-label="Fechar">✕</button>
+      </header>
+      <div class="modal-body">
+        <p id="modal-context" class="modal-context"></p>
+        <label>Anotações do analista
+          <textarea id="notes" rows="4" placeholder="Por que este post é relevante? Contexto, ângulo, território, fonte…"></textarea>
+        </label>
+        <label>Hashtags / tags
+          <div class="tagfield">
+            <div id="taglist" class="taglist"></div>
+            <input id="tag-input" type="text" placeholder="digite e Enter" />
+          </div>
+        </label>
+      </div>
+      <footer class="modal-foot">
+        <button class="btn ghost" id="modal-cancel">Cancelar</button>
+        <button class="btn primary" id="modal-confirm">Salvar nos Curados</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Modal: adicionar conteúdo -->
+  <div id="add-modal" class="modal" hidden>
+    <div class="modal-card">
+      <header class="modal-head">
+        <h2>Adicionar conteúdo</h2>
+        <button class="icon-btn" id="add-close" aria-label="Fechar">✕</button>
+      </header>
+      <div class="modal-body">
+        <p class="modal-context">Cole a URL de um vídeo do TikTok. O ingestor busca autor,
+          legenda, hashtags e baixa a thumbnail real via oEmbed.</p>
+        <label>URL do vídeo
+          <input id="add-url" type="text" placeholder="https://www.tiktok.com/@usuario/video/123…" />
+        </label>
+        <p class="modal-context">Rode no terminal do projeto:</p>
+        <pre class="cmd" id="add-cmd">python3 tools/fetch.py "&lt;cole a URL&gt;"</pre>
+      </div>
+      <footer class="modal-foot">
+        <button class="btn ghost" id="add-cancel">Fechar</button>
+        <button class="btn primary" id="add-copy">Copiar comando</button>
+      </footer>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="data/posts.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
