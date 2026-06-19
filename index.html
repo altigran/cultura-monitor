@@ -15,6 +15,10 @@
       <nav class="crumbs">Configuração <span class="sep">›</span> Minha Conta</nav>
     </div>
     <div class="appbar-right">
+      <label class="userpick">
+        <span class="userpick-label">Você:</span>
+        <select id="user-select"></select>
+      </label>
       <span class="live">live<b>.</b></span>
     </div>
   </header>
@@ -24,6 +28,7 @@
     <aside class="sidebar">
       <button class="nav" data-view="dashboard"><span class="i">▦</span> Dashboard</button>
       <button class="nav is-active" data-view="timeline"><span class="i">≣</span> Timeline</button>
+      <button class="nav" data-view="revisao"><span class="i">⟳</span> Em revisão <span class="navcount" id="count-revisao-nav">0</span></button>
       <button class="nav" data-view="curados"><span class="i">★</span> Curados <span class="navcount" id="count-curados">0</span></button>
       <button class="nav" data-view="reports"><span class="i">⚑</span> Reports <span class="navcount" id="count-reports">0</span></button>
     </aside>
@@ -41,6 +46,7 @@
       <!-- Sub-abas + busca -->
       <div class="subtabs" id="subtabs">
         <button class="subtab is-active" data-view="timeline">Timeline <span class="badge" id="count-timeline">0</span></button>
+        <button class="subtab" data-view="revisao">Em Revisão <span class="badge" id="count-revisao">0</span></button>
         <button class="subtab" data-view="curados">Conteúdos Curados</button>
         <button class="subtab" data-view="reports">Conteúdos Reportados</button>
         <div class="search-wrap">

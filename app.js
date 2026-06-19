@@ -1,15 +1,30 @@
 /* Cultura Monitor — mockup de Curadoria & Análise de posts do TikTok.
- * Estado persiste em localStorage (simula o "banco de dados").
- *   curator.decisions = { [id]: "saved" | "discarded" }
- *   curator.saved     = { [id]: { notes, hashtags: [] } }
- * Views: dashboard | timeline (fila) | curados (salvos) | reports (descartados)
+ * Estado persiste em localStorage (simula o "banco de dados" COMPARTILHADO).
+ *
+ * Fluxo de curadoria em 2 níveis, com vários papéis:
+ *   fila (timeline) ──analista cura──▶ em revisão ──editor aprova──▶ publicado (curados)
+ *                  └─analista descarta─▶ reportado
+ *
+ *   state.user            = id do usuário atual (analista ou editor)
+ *   state.decisions[id]   = { status, by, at, editor?, editorAt? }
+ *                           status ∈ "review" | "published" | "reported"
+ *   state.saved[id]       = { notes, hashtags, by, at }   (conteúdo da curadoria)
+ * Views: dashboard | timeline (fila) | revisao | curados (publicados) | reports
  */
 (function () {
   "use strict";
 
-  const STORE_KEY = "curator.v1";
+  const STORE_KEY = "curator.v2";
   const $ = (s, c = document) => c.querySelector(s);
   const $$ = (s, c = document) => [...c.querySelectorAll(s)];
+
+  // Equipe simulada — alimenta o seletor "Você:" no topo.
+  const USERS = [
+    { id: "ana", name: "Ana Lima", role: "analyst" },
+    { id: "bruno", name: "Bruno Sá", role: "analyst" },
+    { id: "duda", name: "Duda (editora)", role: "editor" },
+  ];
+  const userById = (id) => USERS.find((u) => u.id === id) || USERS[0];
 
   let POSTS = [];
   let state = load();
@@ -18,16 +33,25 @@
   let modalPost = null;
   let pendingTags = [];
 
+  const me = () => userById(state.user);
+  const isEditor = () => me().role === "editor";
+
   const TITLES = {
     dashboard: ["Dashboard", "Visão geral da curadoria"],
     timeline: ["TimeLine", "Confira os posts recentes"],
-    curados: ["Conteúdos Curados", "Posts salvos no banco com anotações"],
+    revisao: ["Em Revisão", "Curadoria dos analistas aguardando o editor"],
+    curados: ["Conteúdos Curados", "Publicados após revisão do editor"],
     reports: ["Conteúdos Reportados", "Posts descartados na triagem"],
   };
 
   function load() {
-    try { return JSON.parse(localStorage.getItem(STORE_KEY)) || { decisions: {}, saved: {} }; }
-    catch { return { decisions: {}, saved: {} }; }
+    let s;
+    try { s = JSON.parse(localStorage.getItem(STORE_KEY)); } catch { s = null; }
+    if (!s || typeof s !== "object") s = {};
+    if (!s.decisions) s.decisions = {};
+    if (!s.saved) s.saved = {};
+    if (!s.user || !USERS.some((u) => u.id === s.user)) s.user = USERS[0].id;
+    return s;
   }
   function persist() { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 
@@ -45,11 +69,22 @@
     return m ? m[1] : (author || "").toLowerCase().replace(/\s+/g, "");
   };
   const initials = (s) => (s || "?").trim().slice(0, 1).toUpperCase();
+  const now = () => new Date().toISOString();
+  const whenLabel = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso), mins = Math.round((Date.now() - d) / 6e4);
+    if (mins < 1) return "agora";
+    if (mins < 60) return `há ${mins} min`;
+    if (mins < 1440) return `há ${Math.round(mins / 60)} h`;
+    return d.toLocaleDateString("pt-BR");
+  };
+  const nameOf = (id) => userById(id).name;
 
   function postsFor(v) {
     const d = state.decisions;
-    if (v === "curados") return POSTS.filter((p) => d[p.id] === "saved");
-    if (v === "reports") return POSTS.filter((p) => d[p.id] === "discarded");
+    if (v === "revisao") return POSTS.filter((p) => d[p.id]?.status === "review");
+    if (v === "curados") return POSTS.filter((p) => d[p.id]?.status === "published");
+    if (v === "reports") return POSTS.filter((p) => d[p.id]?.status === "reported");
     return POSTS.filter((p) => !d[p.id]); // timeline
   }
   function tagsOf(p) {
@@ -71,8 +106,11 @@
     $("#view-title").textContent = TITLES[view][0];
     $("#view-sub").textContent = TITLES[view][1];
     $("#count-timeline").textContent = postsFor("timeline").length;
+    $("#count-revisao").textContent = postsFor("revisao").length;
+    $("#count-revisao-nav").textContent = postsFor("revisao").length;
     $("#count-curados").textContent = postsFor("curados").length;
     $("#count-reports").textContent = postsFor("reports").length;
+    document.body.classList.toggle("is-editor", isEditor());
 
     const isDash = view === "dashboard";
     $("#dashboard").hidden = !isDash;
@@ -90,7 +128,12 @@
       empty.hidden = false;
       empty.textContent = activeChip || $("#search").value
         ? "Nenhum conteúdo para esse filtro."
-        : { timeline: "🎉 Fila vazia! Tudo triado.", curados: "Nenhum conteúdo curado ainda.", reports: "Nenhum conteúdo reportado." }[view];
+        : {
+            timeline: "🎉 Fila vazia! Tudo triado.",
+            revisao: "Nada aguardando revisão.",
+            curados: "Nenhum conteúdo publicado ainda.",
+            reports: "Nenhum conteúdo reportado.",
+          }[view];
       return;
     }
     empty.hidden = true;
@@ -121,16 +164,27 @@
   function card(p) {
     const at = handle(p.author_url || p.link, p.author);
     const saved = state.saved[p.id];
+    const dec = state.decisions[p.id];
     const tags = tagsOf(p);
 
     const wrap = el("article", "pcard");
 
-    // topo: status + ações
+    // topo: status + autoria + ações
     const top = el("div", "pcard-top");
     const sc = el("div", "status-chips");
-    if (view === "curados") sc.appendChild(el("span", "status curado", "Curado"));
-    else if (view === "reports") sc.appendChild(el("span", "status report", "Reportado"));
-    else tags.slice(0, 2).forEach((t) => sc.appendChild(el("span", "status", "#" + t)));
+    if (view === "revisao") {
+      sc.appendChild(el("span", "status review", "Em revisão"));
+      if (dec?.by) sc.appendChild(el("span", "status by", `curado por ${esc(nameOf(dec.by))}`));
+    } else if (view === "curados") {
+      sc.appendChild(el("span", "status curado", "Publicado"));
+      if (dec?.by) sc.appendChild(el("span", "status by", `por ${esc(nameOf(dec.by))}`));
+      if (dec?.editor) sc.appendChild(el("span", "status ok", `✓ ${esc(nameOf(dec.editor))}`));
+    } else if (view === "reports") {
+      sc.appendChild(el("span", "status report", "Reportado"));
+      if (dec?.by) sc.appendChild(el("span", "status by", `por ${esc(nameOf(dec.by))}`));
+    } else {
+      tags.slice(0, 2).forEach((t) => sc.appendChild(el("span", "status", "#" + t)));
+    }
     top.appendChild(sc);
     top.appendChild(actionsFor(p));
     wrap.appendChild(top);
@@ -142,6 +196,13 @@
     thumb.innerHTML = `<img loading="lazy" src="${p.thumbnail}" alt="thumb de ${esc(p.author)}" onerror="this.style.opacity=.2">
       <span class="views">▶ ${fmt(p.views)}</span>`;
     main.appendChild(thumb);
+
+    const stamp =
+      view === "curados" && dec
+        ? `<div class="pcard-stamp">Curado por <b>${esc(nameOf(dec.by))}</b> · publicado por <b>${esc(nameOf(dec.editor))}</b> ${esc(whenLabel(dec.editorAt))}</div>`
+        : view === "revisao" && dec
+        ? `<div class="pcard-stamp">Curado por <b>${esc(nameOf(dec.by))}</b> ${esc(whenLabel(dec.at))}</div>`
+        : "";
 
     const content = el("div", "pcard-content");
     content.innerHTML = `
@@ -156,7 +217,8 @@
         ${metric(p.likes, "curtidas")}${metric(p.comments, "comentários")}${metric(p.shares, "compart.")}
       </div>
       ${tags.length ? `<div class="pcard-tags">${tags.map((t) => `<span class="tag">#${esc(t)}</span>`).join("")}</div>` : ""}
-      ${view === "curados" ? `<div class="pcard-note ${saved?.notes ? "" : "empty"}">${saved?.notes ? esc(saved.notes) : "Sem anotações."}</div>` : ""}
+      ${stamp}
+      ${(view === "curados" || view === "revisao") ? `<div class="pcard-note ${saved?.notes ? "" : "empty"}">${saved?.notes ? esc(saved.notes) : "Sem anotações."}</div>` : ""}
     `;
     main.appendChild(content);
     wrap.appendChild(main);
@@ -170,9 +232,13 @@
     if (view === "timeline") {
       box.appendChild(actBtn("save", "🔖", "Curar", () => openModal(p)));
       box.appendChild(actBtn("discard", "✕", "Descartar", () => discard(p)));
-    } else if (view === "curados") {
-      box.appendChild(actBtn("save is-on", "✎", "Editar", () => openModal(p)));
+    } else if (view === "revisao") {
+      if (isEditor()) box.appendChild(actBtn("approve", "✓", "Aprovar e publicar", () => approve(p)));
+      box.appendChild(actBtn("save is-on", "✎", "Editar curadoria", () => openModal(p)));
       box.appendChild(actBtn("discard", "↩", "Devolver à fila", () => requeue(p)));
+    } else if (view === "curados") {
+      box.appendChild(actBtn("save is-on", "✎", "Editar curadoria", () => openModal(p)));
+      if (isEditor()) box.appendChild(actBtn("discard", "↩", "Despublicar (volta à revisão)", () => unpublish(p)));
     } else {
       box.appendChild(actBtn("save", "↩", "Devolver à fila", () => requeue(p)));
     }
@@ -185,10 +251,29 @@
 
   // ---- ações ----
   function discard(p) {
-    state.decisions[p.id] = "discarded"; persist(); render();
+    state.decisions[p.id] = { status: "reported", by: state.user, at: now() };
+    persist(); render();
     toast(`Reportado: ${p.author}`, () => { delete state.decisions[p.id]; persist(); render(); });
   }
   function requeue(p) { delete state.decisions[p.id]; delete state.saved[p.id]; persist(); render(); }
+
+  function approve(p) {
+    if (!isEditor()) return;
+    const dec = state.decisions[p.id] || {};
+    state.decisions[p.id] = { ...dec, status: "published", editor: state.user, editorAt: now() };
+    persist(); render();
+    toast(`Publicado: ${p.author}`, () => {
+      const d = state.decisions[p.id]; delete d.editor; delete d.editorAt; d.status = "review";
+      persist(); render();
+    });
+  }
+  function unpublish(p) {
+    if (!isEditor()) return;
+    const dec = state.decisions[p.id] || {};
+    delete dec.editor; delete dec.editorAt; dec.status = "review";
+    state.decisions[p.id] = dec; persist(); render();
+    toast(`Devolvido à revisão: ${p.author}`);
+  }
 
   // ---- modal curar ----
   function openModal(p) {
@@ -215,29 +300,60 @@
   }
   function confirmSave() {
     if (!modalPost) return;
-    state.decisions[modalPost.id] = "saved";
-    state.saved[modalPost.id] = { notes: $("#notes").value.trim(), hashtags: [...pendingTags] };
+    const id = modalPost.id;
+    const prev = state.decisions[id];
+    if (prev) {
+      // editando uma curadoria existente — preserva o estágio do pipeline.
+      state.decisions[id] = prev;
+    } else {
+      // primeira curadoria: entra na fila de revisão, atribuída a quem curou.
+      state.decisions[id] = { status: "review", by: state.user, at: now() };
+    }
+    const sv = state.saved[id] || {};
+    state.saved[id] = {
+      notes: $("#notes").value.trim(),
+      hashtags: [...pendingTags],
+      by: sv.by || state.user,
+      at: sv.at || now(),
+    };
     persist();
     const a = modalPost.author; closeModal(); render();
-    toast(`Salvo nos Curados: ${a}`);
+    toast(prev ? `Curadoria atualizada: ${a}` : `Enviado para revisão: ${a}`);
   }
 
   // ---- dashboard ----
   function renderDash() {
-    const q = postsFor("timeline").length, c = postsFor("curados").length, r = postsFor("reports").length;
+    const q = postsFor("timeline").length, rv = postsFor("revisao").length;
+    const c = postsFor("curados").length, r = postsFor("reports").length;
     const total = POSTS.length;
     const counts = {};
-    POSTS.filter((p) => state.decisions[p.id] === "saved")
+    POSTS.filter((p) => state.decisions[p.id]?.status === "published")
       .forEach((p) => tagsOf(p).forEach((t) => (counts[t.toLowerCase()] = (counts[t.toLowerCase()] || 0) + 1)));
     const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
+
+    // produção por analista (curadoria enviada à revisão/publicada)
+    const byAnalyst = {};
+    POSTS.forEach((p) => {
+      const d = state.decisions[p.id];
+      if (d && (d.status === "review" || d.status === "published") && d.by)
+        byAnalyst[d.by] = (byAnalyst[d.by] || 0) + 1;
+    });
+    const analystRows = USERS.filter((u) => u.role === "analyst").map((u) =>
+      `<span class="tag">${esc(u.name)} <b>${byAnalyst[u.id] || 0}</b></span>`).join("");
+
     $("#dashboard").innerHTML = `
       <div class="stat accent"><div class="n">${q}</div><div class="l">Na fila para triagem</div></div>
-      <div class="stat"><div class="n">${c}</div><div class="l">Conteúdos curados</div></div>
+      <div class="stat"><div class="n">${rv}</div><div class="l">Aguardando revisão</div></div>
+      <div class="stat"><div class="n">${c}</div><div class="l">Publicados</div></div>
       <div class="stat"><div class="n">${r}</div><div class="l">Conteúdos reportados</div></div>
       <div class="stat"><div class="n">${total ? Math.round(((c + r) / total) * 100) : 0}%</div><div class="l">Progresso da triagem</div></div>
       <div class="stat dash-wide">
-        <h3>Tags mais usadas nos curados</h3>
-        <div class="toplist">${top.length ? top.map(([t, n]) => `<span class="tag">#${esc(t)} <b>${n}</b></span>`).join("") : '<span class="chips-label">Nenhum conteúdo curado ainda.</span>'}</div>
+        <h3>Curadoria enviada por analista</h3>
+        <div class="toplist">${analystRows || '<span class="chips-label">Sem curadoria ainda.</span>'}</div>
+      </div>
+      <div class="stat dash-wide">
+        <h3>Tags mais usadas nos publicados</h3>
+        <div class="toplist">${top.length ? top.map(([t, n]) => `<span class="tag">#${esc(t)} <b>${n}</b></span>`).join("") : '<span class="chips-label">Nenhum conteúdo publicado ainda.</span>'}</div>
       </div>`;
   }
 
@@ -264,11 +380,20 @@
     $("#add-cmd").textContent = `python3 tools/fetch.py "${u}"`;
   }
 
+  // ---- seletor de usuário ----
+  function renderUserSelect() {
+    const sel = $("#user-select");
+    sel.innerHTML = USERS.map((u) =>
+      `<option value="${u.id}">${esc(u.name)} — ${u.role === "editor" ? "Editor" : "Analista"}</option>`).join("");
+    sel.value = state.user;
+  }
+
   // ---- wiring ----
   function go(v) { view = v; activeChip = null; render(); }
   function wire() {
     $$(".nav").forEach((n) => (n.onclick = () => go(n.dataset.view)));
     $$(".subtab").forEach((t) => (t.onclick = () => go(t.dataset.view)));
+    $("#user-select").onchange = (e) => { state.user = e.target.value; persist(); render(); toast(`Você agora é ${me().name}`); };
     $("#search").addEventListener("input", render);
     $("#search-btn").onclick = render;
     $("#modal-close").onclick = $("#modal-cancel").onclick = closeModal;
@@ -292,5 +417,5 @@
     });
   }
 
-  loadPosts().then((d) => { POSTS = d; wire(); render(); });
+  loadPosts().then((d) => { POSTS = d; renderUserSelect(); wire(); render(); });
 })();

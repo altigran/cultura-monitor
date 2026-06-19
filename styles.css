@@ -36,6 +36,14 @@ button { font-family: inherit; }
 .crumbs .sep { margin: 0 8px; color: #6b7079; }
 .live { font-size: 18px; font-weight: 800; letter-spacing: -.5px; }
 .live b { color: var(--lime); }
+.appbar-right { display: flex; align-items: center; gap: 16px; }
+.userpick { display: flex; align-items: center; gap: 8px; }
+.userpick-label { color: #b9bdc6; font-size: 12px; font-weight: 600; }
+#user-select {
+  background: #23262d; color: #fff; border: 1px solid #3a3e47; border-radius: 8px;
+  padding: 6px 10px; font-size: 12.5px; font-weight: 600; font-family: inherit; cursor: pointer;
+}
+#user-select:focus { outline: none; border-color: var(--lime); }
 
 /* ---------- Layout ---------- */
 .layout { display: grid; grid-template-columns: 210px 1fr; min-height: calc(100vh - 54px); }
@@ -126,6 +134,10 @@ button { font-family: inherit; }
 }
 .status.curado { background: rgba(46,204,113,.12); color: #1e9e57; border-color: rgba(46,204,113,.3); }
 .status.curado::before { content: "● "; }
+.status.review { background: rgba(217,156,28,.14); color: #b27d10; border-color: rgba(217,156,28,.35); }
+.status.review::before { content: "⟳ "; }
+.status.ok { background: rgba(37,99,235,.1); color: var(--accent-2); border-color: rgba(37,99,235,.3); }
+.status.by { background: var(--surface-2); color: var(--muted); border-color: var(--line); font-weight: 600; }
 .status.report { background: rgba(232,72,77,.1); color: var(--danger); border-color: rgba(232,72,77,.3); }
 .pcard-acts { display: flex; gap: 2px; }
 .act {
@@ -136,6 +148,11 @@ button { font-family: inherit; }
 .act.save:hover { color: var(--green); }
 .act.discard:hover { color: var(--danger); }
 .act.is-on { color: var(--lime-strong); }
+.act.approve {
+  width: auto; padding: 0 12px; gap: 5px; background: var(--green); color: #fff;
+  font-weight: 700; font-size: 14px;
+}
+.act.approve:hover { background: #25a85b; color: #fff; }
 
 .pcard-main { display: flex; gap: 14px; }
 .pcard-thumb {
@@ -173,6 +190,8 @@ button { font-family: inherit; }
   padding: 9px 11px; font-size: 12.5px; color: #3a3f49; white-space: pre-wrap;
 }
 .pcard-note.empty { color: var(--muted); font-style: italic; }
+.pcard-stamp { font-size: 11.5px; color: var(--muted); }
+.pcard-stamp b { color: #3a3f49; font-weight: 700; }
 .open-link { font-size: 12px; font-weight: 700; color: var(--accent-2); text-decoration: none; }
 .open-link:hover { text-decoration: underline; }
 

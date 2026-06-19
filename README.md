@@ -19,13 +19,26 @@ python3 -m http.server 8000
 
 ## Funcionalidades
 
-- **Fila / Salvos / Descartados** com contadores.
+- **Curadoria em 2 níveis, com vários papéis** (seletor "Você:" no topo):
+
+  ```
+  fila ──analista cura──▶ em revisão ──editor aprova──▶ publicado
+       └─analista descarta─▶ reportado
+  ```
+
+  Vários analistas alimentam a fila de **Em revisão**; um **editor** faz o 2º
+  nível (aprovar/publicar ou devolver). Cada decisão registra **quem** e
+  **quando** — o card mostra "curado por X · publicado por Y".
+- **Fila / Em revisão / Curados / Reports** com contadores.
 - Card com autor, legenda, hashtags, métricas e link "Abrir no TikTok".
-- **Salvar** abre um modal para anotações do analista + hashtags (chips).
-- **Descartar** com opção de *Desfazer*.
-- Devolver itens à fila a partir de Salvos/Descartados.
+- **Curar** abre um modal para anotações do analista + hashtags (chips).
+- **Descartar** com opção de *Desfazer*; devolver itens à fila.
+- Dashboard com produção por analista e tags dos publicados.
 - Busca por autor, legenda ou hashtag.
-- Decisões persistem em `localStorage` (simula o banco de dados).
+- Estado persiste em `localStorage` (simula o banco **compartilhado** — nesta
+  Opção A a troca de usuário é simulada no mesmo navegador; sincronizar entre
+  máquinas exige um backend, que a camada `load/persist` deixa pronta para
+  substituir).
 
 ## Dados reais
 
