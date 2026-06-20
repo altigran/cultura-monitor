@@ -1,15 +1,16 @@
 /* Cultura Monitor — mockup de Curadoria & Análise de posts do TikTok.
  * Estado persiste em localStorage (simula o "banco de dados" COMPARTILHADO).
  *
- * Fluxo de curadoria em 2 níveis, com vários papéis:
- *   fila (timeline) ──analista cura──▶ em revisão ──editor aprova──▶ publicado (curados)
- *                  └─analista descarta─▶ reportado
+ * Fluxo de curadoria em 2 níveis (pós-moderação), com vários papéis:
+ *   fila (timeline) ──analista cura──▶ Workspace ──editor descarta──▶ Descarte
+ *                  └─analista descarta──────────────────────────────▶ Descarte
+ *   No Workspace, "manter" é implícito; só o editor poda (descarta).
  *
  *   state.user            = id do usuário atual (analista ou editor)
- *   state.decisions[id]   = { status, by, at, editor?, editorAt? }
- *                           status ∈ "review" | "published" | "reported"
+ *   state.decisions[id]   = { status, by, at }
+ *                           status ∈ "published" (no Workspace) | "reported" (Descarte)
  *   state.saved[id]       = { notes, hashtags, by, at }   (conteúdo da curadoria)
- * Views: dashboard | timeline (fila) | revisao | curados (publicados) | reports
+ * Views: dashboard | timeline (fila) | curados (Workspace) | reports (Descarte)
  */
 (function () {
   "use strict";
@@ -39,9 +40,8 @@
   const TITLES = {
     dashboard: ["Dashboard", "Visão geral da curadoria"],
     timeline: ["TimeLine", "Confira os posts recentes"],
-    revisao: ["Em Revisão", "Curadoria dos analistas aguardando o editor"],
-    curados: ["Conteúdos Curados", "Publicados após revisão do editor"],
-    reports: ["Conteúdos Reportados", "Posts descartados na triagem"],
+    curados: ["Workspace", "Curado pela equipe — o editor mantém ou descarta"],
+    reports: ["Descarte", "Posts descartados na triagem ou pelo editor"],
   };
 
   function load() {
@@ -50,7 +50,15 @@
     if (!s || typeof s !== "object") s = {};
     if (!s.decisions) s.decisions = {};
     if (!s.saved) s.saved = {};
+    if (!Array.isArray(s.added)) s.added = []; // posts incluídos manualmente
     if (!s.user || !USERS.some((u) => u.id === s.user)) s.user = USERS[0].id;
+    // migração: o antigo estágio "review" agora entra direto no Workspace.
+    Object.values(s.decisions).forEach((d) => {
+      if (d && typeof d === "object") {
+        if (d.status === "review") d.status = "published";
+        delete d.editor; delete d.editorAt;
+      }
+    });
     return s;
   }
   function persist() { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
@@ -80,9 +88,27 @@
   };
   const nameOf = (id) => userById(id).name;
 
+  // Coleta simulada: o "bot" roda na madrugada — sempre "ontem ~03:14".
+  function lastRun() {
+    const d = new Date(); d.setDate(d.getDate() - 1); d.setHours(3, 14, 0, 0); return d;
+  }
+  function dayWhen(d) {
+    const day0 = new Date(d); day0.setHours(0, 0, 0, 0);
+    const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+    const diff = Math.round((t0 - day0) / 864e5);
+    const hm = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    return `${diff === 0 ? "hoje" : diff === 1 ? "ontem" : d.toLocaleDateString("pt-BR")} às ${hm}`;
+  }
+  const isManual = (p) => p.source === "manual";
+  // Linha de proveniência: distingue post do bot x adição manual.
+  function provenance(p) {
+    return isManual(p)
+      ? `✋ Adicionado por ${esc(nameOf(p.added_by))} ${esc(whenLabel(p.added_at))}`
+      : `🤖 Coletado ${esc(dayWhen(lastRun()))}`;
+  }
+
   function postsFor(v) {
     const d = state.decisions;
-    if (v === "revisao") return POSTS.filter((p) => d[p.id]?.status === "review");
     if (v === "curados") return POSTS.filter((p) => d[p.id]?.status === "published");
     if (v === "reports") return POSTS.filter((p) => d[p.id]?.status === "reported");
     return POSTS.filter((p) => !d[p.id]); // timeline
@@ -106,8 +132,6 @@
     $("#view-title").textContent = TITLES[view][0];
     $("#view-sub").textContent = TITLES[view][1];
     $("#count-timeline").textContent = postsFor("timeline").length;
-    $("#count-revisao").textContent = postsFor("revisao").length;
-    $("#count-revisao-nav").textContent = postsFor("revisao").length;
     $("#count-curados").textContent = postsFor("curados").length;
     $("#count-reports").textContent = postsFor("reports").length;
     document.body.classList.toggle("is-editor", isEditor());
@@ -117,7 +141,25 @@
     $("#grid").hidden = isDash;
     $(".subtabs").style.display = isDash ? "none" : "";
     $(".chips-row").style.display = isDash ? "none" : "";
-    if (isDash) { $("#empty").hidden = true; return renderDash(); }
+    if (isDash) { $("#empty").hidden = true; $("#collect-banner").hidden = true; return renderDash(); }
+
+    // Faixa de proveniência: deixa explícito que a fila veio do bot.
+    const banner = $("#collect-banner");
+    if (view === "timeline") {
+      banner.hidden = false;
+      const botN = POSTS.filter((p) => !isManual(p)).length;
+      const manualN = POSTS.filter(isManual).length;
+      banner.innerHTML = `<span class="cb-bot">🤖 Coleta automática</span>
+        <span class="cb-info"><b>${botN}</b> posts trazidos pelo bot · ${esc(dayWhen(lastRun()))}${manualN ? ` · <b>${manualN}</b> ✋ manuais` : ""}</span>
+        <span class="cb-q"><b>${postsFor("timeline").length}</b> na fila para triagem</span>`;
+    } else if (view === "curados") {
+      banner.hidden = false;
+      const pub = postsFor("curados");
+      const curators = new Set(pub.map((p) => state.decisions[p.id]?.by).filter(Boolean));
+      banner.innerHTML = `<span class="cb-bot cb-ws">📋 Workspace</span>
+        <span class="cb-info">origem: coleta de ${esc(dayWhen(lastRun()))} · <b>${pub.length}</b> ${pub.length === 1 ? "item curado" : "itens curados"}${curators.size ? ` por <b>${curators.size}</b> ${curators.size === 1 ? "analista" : "analistas"}` : ""}</span>
+        <span class="cb-q">🤝 compartilhado pela equipe</span>`;
+    } else banner.hidden = true;
 
     renderChips();
     const list = applyFilters(postsFor(view));
@@ -130,9 +172,8 @@
         ? "Nenhum conteúdo para esse filtro."
         : {
             timeline: "🎉 Fila vazia! Tudo triado.",
-            revisao: "Nada aguardando revisão.",
-            curados: "Nenhum conteúdo publicado ainda.",
-            reports: "Nenhum conteúdo reportado.",
+            curados: "Workspace vazio — nada curado ainda.",
+            reports: "Nada descartado.",
           }[view];
       return;
     }
@@ -172,17 +213,14 @@
     // topo: status + autoria + ações
     const top = el("div", "pcard-top");
     const sc = el("div", "status-chips");
-    if (view === "revisao") {
-      sc.appendChild(el("span", "status review", "Em revisão"));
-      if (dec?.by) sc.appendChild(el("span", "status by", `curado por ${esc(nameOf(dec.by))}`));
-    } else if (view === "curados") {
-      sc.appendChild(el("span", "status curado", "Publicado"));
+    if (view === "curados") {
+      sc.appendChild(el("span", "status curado", "Curado"));
       if (dec?.by) sc.appendChild(el("span", "status by", `por ${esc(nameOf(dec.by))}`));
-      if (dec?.editor) sc.appendChild(el("span", "status ok", `✓ ${esc(nameOf(dec.editor))}`));
     } else if (view === "reports") {
-      sc.appendChild(el("span", "status report", "Reportado"));
+      sc.appendChild(el("span", "status report", "Descartado"));
       if (dec?.by) sc.appendChild(el("span", "status by", `por ${esc(nameOf(dec.by))}`));
     } else {
+      if (isManual(p)) sc.appendChild(el("span", "status manual", "✋ manual"));
       tags.slice(0, 2).forEach((t) => sc.appendChild(el("span", "status", "#" + t)));
     }
     top.appendChild(sc);
@@ -193,14 +231,14 @@
     const main = el("div", "pcard-main");
     const thumb = el("a", "pcard-thumb");
     thumb.href = p.link; thumb.target = "_blank"; thumb.rel = "noopener";
-    thumb.innerHTML = `<img loading="lazy" src="${p.thumbnail}" alt="thumb de ${esc(p.author)}" onerror="this.style.opacity=.2">
-      <span class="views">▶ ${fmt(p.views)}</span>`;
+    thumb.innerHTML = p.thumbnail
+      ? `<img loading="lazy" src="${p.thumbnail}" alt="thumb de ${esc(p.author)}" onerror="this.style.opacity=.2">
+         <span class="views">▶ ${fmt(p.views)}</span>`
+      : `<span class="thumb-ph">✋<small>sem prévia</small></span>`;
     main.appendChild(thumb);
 
     const stamp =
       view === "curados" && dec
-        ? `<div class="pcard-stamp">Curado por <b>${esc(nameOf(dec.by))}</b> · publicado por <b>${esc(nameOf(dec.editor))}</b> ${esc(whenLabel(dec.editorAt))}</div>`
-        : view === "revisao" && dec
         ? `<div class="pcard-stamp">Curado por <b>${esc(nameOf(dec.by))}</b> ${esc(whenLabel(dec.at))}</div>`
         : "";
 
@@ -210,7 +248,7 @@
         <span class="avatar">${esc(initials(p.author))}</span>
         <b>${esc(p.author)}</b> <span class="handle">@${esc(at)}</span>
       </div>
-      <div class="pcard-meta">Postado em ${esc(p.posted_at)} · ${p.metrics_simulated ? "métricas simuladas" : "métricas reais"} ·
+      <div class="pcard-meta">${provenance(p)}${p.posted_at && p.posted_at !== "—" ? ` · 📅 publicado na rede em ${esc(p.posted_at)}` : ""} · ${p.metrics_simulated ? "métricas simuladas" : "métricas reais"} ·
         <a class="open-link" href="${p.link}" target="_blank" rel="noopener">abrir no TikTok ↗</a></div>
       <p class="pcard-caption">${esc(p.caption) || "&lt;sem legenda&gt;"}</p>
       <div class="pcard-metrics">
@@ -218,7 +256,7 @@
       </div>
       ${tags.length ? `<div class="pcard-tags">${tags.map((t) => `<span class="tag">#${esc(t)}</span>`).join("")}</div>` : ""}
       ${stamp}
-      ${(view === "curados" || view === "revisao") ? `<div class="pcard-note ${saved?.notes ? "" : "empty"}">${saved?.notes ? esc(saved.notes) : "Sem anotações."}</div>` : ""}
+      ${view === "curados" ? `<div class="pcard-note ${saved?.notes ? "" : "empty"}">${saved?.notes ? esc(saved.notes) : "Sem anotações."}</div>` : ""}
     `;
     main.appendChild(content);
     wrap.appendChild(main);
@@ -232,13 +270,10 @@
     if (view === "timeline") {
       box.appendChild(actBtn("save", "🔖", "Curar", () => openModal(p)));
       box.appendChild(actBtn("discard", "✕", "Descartar", () => discard(p)));
-    } else if (view === "revisao") {
-      if (isEditor()) box.appendChild(actBtn("approve", "✓", "Aprovar e publicar", () => approve(p)));
-      box.appendChild(actBtn("save is-on", "✎", "Editar curadoria", () => openModal(p)));
-      box.appendChild(actBtn("discard", "↩", "Devolver à fila", () => requeue(p)));
     } else if (view === "curados") {
       box.appendChild(actBtn("save is-on", "✎", "Editar curadoria", () => openModal(p)));
-      if (isEditor()) box.appendChild(actBtn("discard", "↩", "Despublicar (volta à revisão)", () => unpublish(p)));
+      box.appendChild(actBtn("discard", "↩", "Devolver à fila", () => requeue(p)));
+      if (isEditor()) box.appendChild(actBtn("discard", "✕", "Descartar do Workspace (editor)", () => discardFromWorkspace(p)));
     } else {
       box.appendChild(actBtn("save", "↩", "Devolver à fila", () => requeue(p)));
     }
@@ -253,26 +288,17 @@
   function discard(p) {
     state.decisions[p.id] = { status: "reported", by: state.user, at: now() };
     persist(); render();
-    toast(`Reportado: ${p.author}`, () => { delete state.decisions[p.id]; persist(); render(); });
+    toast(`Descartado: ${p.author}`, () => { delete state.decisions[p.id]; persist(); render(); });
   }
   function requeue(p) { delete state.decisions[p.id]; delete state.saved[p.id]; persist(); render(); }
 
-  function approve(p) {
+  // 2º nível: o editor poda o Workspace. "Manter" é implícito (não fazer nada).
+  function discardFromWorkspace(p) {
     if (!isEditor()) return;
-    const dec = state.decisions[p.id] || {};
-    state.decisions[p.id] = { ...dec, status: "published", editor: state.user, editorAt: now() };
+    const prev = state.decisions[p.id];
+    state.decisions[p.id] = { status: "reported", by: state.user, at: now() };
     persist(); render();
-    toast(`Publicado: ${p.author}`, () => {
-      const d = state.decisions[p.id]; delete d.editor; delete d.editorAt; d.status = "review";
-      persist(); render();
-    });
-  }
-  function unpublish(p) {
-    if (!isEditor()) return;
-    const dec = state.decisions[p.id] || {};
-    delete dec.editor; delete dec.editorAt; dec.status = "review";
-    state.decisions[p.id] = dec; persist(); render();
-    toast(`Devolvido à revisão: ${p.author}`);
+    toast(`Descartado do Workspace: ${p.author}`, () => { state.decisions[p.id] = prev; persist(); render(); });
   }
 
   // ---- modal curar ----
@@ -302,13 +328,8 @@
     if (!modalPost) return;
     const id = modalPost.id;
     const prev = state.decisions[id];
-    if (prev) {
-      // editando uma curadoria existente — preserva o estágio do pipeline.
-      state.decisions[id] = prev;
-    } else {
-      // primeira curadoria: entra na fila de revisão, atribuída a quem curou.
-      state.decisions[id] = { status: "review", by: state.user, at: now() };
-    }
+    // primeira curadoria entra direto no Workspace, atribuída a quem curou.
+    if (!prev) state.decisions[id] = { status: "published", by: state.user, at: now() };
     const sv = state.saved[id] || {};
     state.saved[id] = {
       notes: $("#notes").value.trim(),
@@ -318,12 +339,12 @@
     };
     persist();
     const a = modalPost.author; closeModal(); render();
-    toast(prev ? `Curadoria atualizada: ${a}` : `Enviado para revisão: ${a}`);
+    toast(prev ? `Curadoria atualizada: ${a}` : `Adicionado ao Workspace: ${a}`);
   }
 
   // ---- dashboard ----
   function renderDash() {
-    const q = postsFor("timeline").length, rv = postsFor("revisao").length;
+    const q = postsFor("timeline").length;
     const c = postsFor("curados").length, r = postsFor("reports").length;
     const total = POSTS.length;
     const counts = {};
@@ -331,11 +352,11 @@
       .forEach((p) => tagsOf(p).forEach((t) => (counts[t.toLowerCase()] = (counts[t.toLowerCase()] || 0) + 1)));
     const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
 
-    // produção por analista (curadoria enviada à revisão/publicada)
+    // produção por analista (curadoria que está no Workspace)
     const byAnalyst = {};
     POSTS.forEach((p) => {
       const d = state.decisions[p.id];
-      if (d && (d.status === "review" || d.status === "published") && d.by)
+      if (d && d.status === "published" && d.by)
         byAnalyst[d.by] = (byAnalyst[d.by] || 0) + 1;
     });
     const analystRows = USERS.filter((u) => u.role === "analyst").map((u) =>
@@ -343,17 +364,16 @@
 
     $("#dashboard").innerHTML = `
       <div class="stat accent"><div class="n">${q}</div><div class="l">Na fila para triagem</div></div>
-      <div class="stat"><div class="n">${rv}</div><div class="l">Aguardando revisão</div></div>
-      <div class="stat"><div class="n">${c}</div><div class="l">Publicados</div></div>
-      <div class="stat"><div class="n">${r}</div><div class="l">Conteúdos reportados</div></div>
+      <div class="stat"><div class="n">${c}</div><div class="l">No Workspace</div></div>
+      <div class="stat"><div class="n">${r}</div><div class="l">Descartados</div></div>
       <div class="stat"><div class="n">${total ? Math.round(((c + r) / total) * 100) : 0}%</div><div class="l">Progresso da triagem</div></div>
       <div class="stat dash-wide">
-        <h3>Curadoria enviada por analista</h3>
+        <h3>Curadoria por analista</h3>
         <div class="toplist">${analystRows || '<span class="chips-label">Sem curadoria ainda.</span>'}</div>
       </div>
       <div class="stat dash-wide">
-        <h3>Tags mais usadas nos publicados</h3>
-        <div class="toplist">${top.length ? top.map(([t, n]) => `<span class="tag">#${esc(t)} <b>${n}</b></span>`).join("") : '<span class="chips-label">Nenhum conteúdo publicado ainda.</span>'}</div>
+        <h3>Tags mais usadas no Workspace</h3>
+        <div class="toplist">${top.length ? top.map(([t, n]) => `<span class="tag">#${esc(t)} <b>${n}</b></span>`).join("") : '<span class="chips-label">Workspace vazio ainda.</span>'}</div>
       </div>`;
   }
 
@@ -373,11 +393,36 @@
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
-  // ---- add modal ----
-  function openAdd() { $("#add-modal").hidden = false; $("#add-url").value = ""; updateCmd(); $("#add-url").focus(); }
+  // ---- add modal (adição manual) ----
+  function openAdd() {
+    $("#add-modal").hidden = false;
+    $("#add-url").value = ""; $("#add-author").value = ""; $("#add-caption").value = "";
+    updateCmd(); $("#add-url").focus();
+  }
   function updateCmd() {
     const u = $("#add-url").value.trim() || "<cole a URL>";
     $("#add-cmd").textContent = `python3 tools/fetch.py "${u}"`;
+  }
+  function addManual() {
+    const url = $("#add-url").value.trim();
+    if (!url) { $("#add-url").focus(); return; }
+    const at = handle(url);
+    const post = {
+      id: "m" + Date.now(),
+      author: $("#add-author").value.trim() || ("@" + at),
+      author_url: url, caption: $("#add-caption").value.trim(),
+      link: url, thumbnail: "", hashtags: [],
+      metrics_simulated: true, views: 0, likes: 0, comments: 0, shares: 0,
+      posted_at: "—",
+      source: "manual", added_by: state.user, added_at: now(),
+    };
+    state.added.unshift(post);
+    POSTS.unshift(post);
+    persist();
+    $("#add-modal").hidden = true;
+    view = "timeline"; activeChip = null; $("#search").value = "";
+    render();
+    toast(`Adicionado à fila por ${me().name}: ${post.author}`);
   }
 
   // ---- seletor de usuário ----
@@ -406,6 +451,7 @@
     $("#add-content").onclick = openAdd;
     $("#add-url").addEventListener("input", updateCmd);
     $("#add-close").onclick = $("#add-cancel").onclick = () => ($("#add-modal").hidden = true);
+    $("#add-confirm").onclick = addManual;
     $("#add-copy").onclick = () => {
       navigator.clipboard?.writeText($("#add-cmd").textContent).then(() => toast("Comando copiado!"));
     };
@@ -417,5 +463,5 @@
     });
   }
 
-  loadPosts().then((d) => { POSTS = d; renderUserSelect(); wire(); render(); });
+  loadPosts().then((d) => { POSTS = [...state.added, ...d]; renderUserSelect(); wire(); render(); });
 })();

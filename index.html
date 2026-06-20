@@ -28,9 +28,8 @@
     <aside class="sidebar">
       <button class="nav" data-view="dashboard"><span class="i">▦</span> Dashboard</button>
       <button class="nav is-active" data-view="timeline"><span class="i">≣</span> Timeline</button>
-      <button class="nav" data-view="revisao"><span class="i">⟳</span> Em revisão <span class="navcount" id="count-revisao-nav">0</span></button>
-      <button class="nav" data-view="curados"><span class="i">★</span> Curados <span class="navcount" id="count-curados">0</span></button>
-      <button class="nav" data-view="reports"><span class="i">⚑</span> Reports <span class="navcount" id="count-reports">0</span></button>
+      <button class="nav" data-view="curados"><span class="i">★</span> Workspace <span class="navcount" id="count-curados">0</span></button>
+      <button class="nav" data-view="reports"><span class="i">⚑</span> Descarte <span class="navcount" id="count-reports">0</span></button>
     </aside>
 
     <!-- Conteúdo -->
@@ -40,15 +39,14 @@
           <h1 id="view-title">TimeLine</h1>
           <p id="view-sub" class="muted">Confira os posts recentes</p>
         </div>
-        <button class="btn-yellow" id="add-content">+ Adicionar Conteúdo</button>
+        <button class="btn-yellow" id="add-content">✋ Adicionar manualmente</button>
       </div>
 
       <!-- Sub-abas + busca -->
       <div class="subtabs" id="subtabs">
         <button class="subtab is-active" data-view="timeline">Timeline <span class="badge" id="count-timeline">0</span></button>
-        <button class="subtab" data-view="revisao">Em Revisão <span class="badge" id="count-revisao">0</span></button>
-        <button class="subtab" data-view="curados">Conteúdos Curados</button>
-        <button class="subtab" data-view="reports">Conteúdos Reportados</button>
+        <button class="subtab" data-view="curados">Workspace</button>
+        <button class="subtab" data-view="reports">Descarte</button>
         <div class="search-wrap">
           <input id="search" type="search" placeholder="Pesquisar" />
           <button class="btn-ok" id="search-btn">OK</button>
@@ -60,6 +58,9 @@
         <span class="chips-label">Filtros aplicados:</span>
         <div class="chips" id="chips"></div>
       </div>
+
+      <!-- Faixa de proveniência da coleta -->
+      <div id="collect-banner" class="collect-banner" hidden></div>
 
       <!-- Feed -->
       <section id="grid" class="feed"></section>
@@ -89,7 +90,7 @@
       </div>
       <footer class="modal-foot">
         <button class="btn ghost" id="modal-cancel">Cancelar</button>
-        <button class="btn primary" id="modal-confirm">Salvar nos Curados</button>
+        <button class="btn primary" id="modal-confirm">Salvar no Workspace</button>
       </footer>
     </div>
   </div>
@@ -98,21 +99,32 @@
   <div id="add-modal" class="modal" hidden>
     <div class="modal-card">
       <header class="modal-head">
-        <h2>Adicionar conteúdo</h2>
+        <h2>✋ Adicionar manualmente</h2>
         <button class="icon-btn" id="add-close" aria-label="Fechar">✕</button>
       </header>
       <div class="modal-body">
-        <p class="modal-context">Cole a URL de um vídeo do TikTok. O ingestor busca autor,
-          legenda, hashtags e baixa a thumbnail real via oEmbed.</p>
+        <p class="modal-context">A fila é alimentada pela <b>coleta automática do bot</b> toda
+          madrugada. Use isto para incluir um post <b>pontualmente</b>, fora desse ciclo — ele
+          entra na fila marcado como <b>✋ manual</b>, atribuído a você.</p>
         <label>URL do vídeo
           <input id="add-url" type="text" placeholder="https://www.tiktok.com/@usuario/video/123…" />
         </label>
-        <p class="modal-context">Rode no terminal do projeto:</p>
-        <pre class="cmd" id="add-cmd">python3 tools/fetch.py "&lt;cole a URL&gt;"</pre>
+        <label>Autor <span class="opt">(opcional)</span>
+          <input id="add-author" type="text" placeholder="ex.: Zach King" />
+        </label>
+        <label>Legenda / contexto <span class="opt">(opcional)</span>
+          <textarea id="add-caption" rows="2" placeholder="por que está incluindo este post?"></textarea>
+        </label>
+        <p class="modal-context">Métricas e thumbnail vêm da coleta automática. Para <b>enriquecer</b>
+          este item depois, rode o ingestor:</p>
+        <div class="cmd-row">
+          <pre class="cmd" id="add-cmd">python3 tools/fetch.py "&lt;cole a URL&gt;"</pre>
+          <button class="btn ghost" id="add-copy">Copiar</button>
+        </div>
       </div>
       <footer class="modal-foot">
-        <button class="btn ghost" id="add-cancel">Fechar</button>
-        <button class="btn primary" id="add-copy">Copiar comando</button>
+        <button class="btn ghost" id="add-cancel">Cancelar</button>
+        <button class="btn primary" id="add-confirm">Adicionar à fila</button>
       </footer>
     </div>
   </div>
