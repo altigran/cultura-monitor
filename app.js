@@ -1,25 +1,50 @@
-/* Cultura Monitor — mockup de Curadoria & Análise de posts do TikTok.
- * Estado persiste em localStorage (simula o "banco de dados" COMPARTILHADO).
+/* Culture Monitor — mockup de Curadoria por Tópico (modelo live.tt).
  *
- * Fluxo de curadoria em 2 níveis (pós-moderação), com vários papéis:
- *   fila (timeline) ──analista cura──▶ Workspace ──editor descarta──▶ Descarte
- *                  └─analista descarta──────────────────────────────▶ Descarte
- *   No Workspace, "manter" é implícito; só o editor poda (descarta).
+ * Território (agrupa) ▸ Tópico (1 robô + palavras-chave) ▸ posts coletados.
+ * A curadoria é POR TÓPICO: o analista escolhe um tópico (contexto) e trabalha
+ * a fila daquele robô. Pós-moderação, 2 níveis:
+ *   Timeline(tópico) ─analista cura─▶ Workspace(tópico) ─editor descarta─▶ Descarte(tópico)
+ *                    └─analista descarta────────────────────────────────▶ Descarte(tópico)
+ * Sobreposição: um post pode pertencer a vários tópicos; a decisão é por
+ * (tópico × post). "Manter" no Workspace é implícito; só o editor poda.
  *
- *   state.user            = id do usuário atual (analista ou editor)
- *   state.decisions[id]   = { status, by, at }
- *                           status ∈ "published" (no Workspace) | "reported" (Descarte)
- *   state.saved[id]       = { notes, hashtags, by, at }   (conteúdo da curadoria)
- * Views: dashboard | timeline (fila) | curados (Workspace) | reports (Descarte)
+ *   state.user                       = usuário atual (analista | editor)
+ *   state.topic                      = tópico em foco (contexto de trabalho)
+ *   state.decisions[topic][postId]   = { status, by, at }   status: published | reported
+ *   state.saved[topic][postId]       = { notes, hashtags, by, at }
+ *   state.added                      = posts incluídos manualmente (com .topics)
  */
 (function () {
   "use strict";
 
-  const STORE_KEY = "curator.v2";
+  const STORE_KEY = "curator.v3";
   const $ = (s, c = document) => c.querySelector(s);
   const $$ = (s, c = document) => [...c.querySelectorAll(s)];
 
-  // Equipe simulada — alimenta o seletor "Você:" no topo.
+  // Catálogo Território → Tópico. No mockup é fixo (quem define fica para depois).
+  const TERRITORIES = [
+    { id: "esportes", name: "Esportes", topics: [
+      { id: "volei", name: "Vôlei" },
+      { id: "basquete", name: "Basquete (NBA, NBB)" },
+      { id: "surf", name: "Surf" },
+    ] },
+    { id: "musica", name: "Música", topics: [
+      { id: "pop", name: "Pop nacional" },
+      { id: "rap", name: "Rap & Trap" },
+    ] },
+    { id: "cinema", name: "Cinema, TV & Streaming", topics: [
+      { id: "series", name: "Séries & Streaming" },
+      { id: "estreias", name: "Estreias de cinema" },
+    ] },
+  ];
+  const ALL_TOPICS = TERRITORIES.flatMap((t) => t.topics.map((tp) => tp.id));
+  const topicName = (id) => {
+    for (const t of TERRITORIES) { const tp = t.topics.find((x) => x.id === id); if (tp) return tp.name; }
+    return id;
+  };
+  const territoryOfTopic = (id) => TERRITORIES.find((t) => t.topics.some((x) => x.id === id)) || null;
+
+  // Equipe simulada — alimenta o seletor "Você:".
   const USERS = [
     { id: "ana", name: "Ana Lima", role: "analyst" },
     { id: "bruno", name: "Bruno Sá", role: "analyst" },
@@ -37,8 +62,14 @@
   const me = () => userById(state.user);
   const isEditor = () => me().role === "editor";
 
+  // Acesso ao estado do tópico atual (cria o "saco" sob demanda).
+  const decBag = () => (state.decisions[state.topic] ||= {});
+  const savedBag = () => (state.saved[state.topic] ||= {});
+  const dOf = (p) => state.decisions[state.topic]?.[p.id];
+  const sOf = (p) => state.saved[state.topic]?.[p.id];
+
   const TITLES = {
-    dashboard: ["Dashboard", "Visão geral da curadoria"],
+    dashboard: ["Dashboard", "Visão geral do tópico"],
     timeline: ["TimeLine", "Confira os posts recentes"],
     curados: ["Workspace", "Curado pela equipe — o editor mantém ou descarta"],
     reports: ["Descarte", "Posts descartados na triagem ou pelo editor"],
@@ -50,15 +81,9 @@
     if (!s || typeof s !== "object") s = {};
     if (!s.decisions) s.decisions = {};
     if (!s.saved) s.saved = {};
-    if (!Array.isArray(s.added)) s.added = []; // posts incluídos manualmente
+    if (!Array.isArray(s.added)) s.added = [];
     if (!s.user || !USERS.some((u) => u.id === s.user)) s.user = USERS[0].id;
-    // migração: o antigo estágio "review" agora entra direto no Workspace.
-    Object.values(s.decisions).forEach((d) => {
-      if (d && typeof d === "object") {
-        if (d.status === "review") d.status = "published";
-        delete d.editor; delete d.editorAt;
-      }
-    });
+    if (!s.topic || !ALL_TOPICS.includes(s.topic)) s.topic = ALL_TOPICS[0];
     return s;
   }
   function persist() { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
@@ -88,7 +113,7 @@
   };
   const nameOf = (id) => userById(id).name;
 
-  // Coleta simulada: o "bot" roda na madrugada — sempre "ontem ~03:14".
+  // Coleta simulada: o robô do tópico roda na madrugada — sempre "ontem ~03:14".
   function lastRun() {
     const d = new Date(); d.setDate(d.getDate() - 1); d.setHours(3, 14, 0, 0); return d;
   }
@@ -100,21 +125,32 @@
     return `${diff === 0 ? "hoje" : diff === 1 ? "ontem" : d.toLocaleDateString("pt-BR")} às ${hm}`;
   }
   const isManual = (p) => p.source === "manual";
-  // Linha de proveniência: distingue post do bot x adição manual.
   function provenance(p) {
     return isManual(p)
       ? `✋ Adicionado por ${esc(nameOf(p.added_by))} ${esc(whenLabel(p.added_at))}`
       : `🤖 Coletado ${esc(dayWhen(lastRun()))}`;
   }
 
+  // Pertinência por tópico (com sobreposição). Posts manuais trazem .topics
+  // explícito; para o dataset, distribuição determinística pelo id.
+  function postInTopic(p, topicId) {
+    if (Array.isArray(p.topics)) return p.topics.includes(topicId);
+    const ti = ALL_TOPICS.indexOf(topicId);
+    const h = String(p.id).split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+    if (ALL_TOPICS[h % ALL_TOPICS.length] === topicId) return true; // tópico primário garantido
+    return (h + ti) % 3 === 0; // sobreposição
+  }
+  const topicPosts = () => POSTS.filter((p) => postInTopic(p, state.topic));
+
   function postsFor(v) {
-    const d = state.decisions;
-    if (v === "curados") return POSTS.filter((p) => d[p.id]?.status === "published");
-    if (v === "reports") return POSTS.filter((p) => d[p.id]?.status === "reported");
-    return POSTS.filter((p) => !d[p.id]); // timeline
+    const inTopic = topicPosts();
+    if (v === "curados") return inTopic.filter((p) => dOf(p)?.status === "published");
+    if (v === "reports") return inTopic.filter((p) => dOf(p)?.status === "reported");
+    return inTopic.filter((p) => !dOf(p)); // timeline
   }
   function tagsOf(p) {
-    return (state.saved[p.id]?.hashtags?.length ? state.saved[p.id].hashtags : p.hashtags) || [];
+    const s = sOf(p);
+    return (s?.hashtags?.length ? s.hashtags : p.hashtags) || [];
   }
   function applyFilters(list) {
     const q = $("#search").value.trim().toLowerCase();
@@ -136,6 +172,9 @@
     $("#count-reports").textContent = postsFor("reports").length;
     document.body.classList.toggle("is-editor", isEditor());
 
+    const terr = territoryOfTopic(state.topic);
+    $("#crumbs").innerHTML = `${esc(terr ? terr.name : "—")} <span class="sep">›</span> <b>${esc(topicName(state.topic))}</b>`;
+
     const isDash = view === "dashboard";
     $("#dashboard").hidden = !isDash;
     $("#grid").hidden = isDash;
@@ -143,21 +182,22 @@
     $(".chips-row").style.display = isDash ? "none" : "";
     if (isDash) { $("#empty").hidden = true; $("#collect-banner").hidden = true; return renderDash(); }
 
-    // Faixa de proveniência: deixa explícito que a fila veio do bot.
+    // Faixa de proveniência, escopada ao tópico atual.
     const banner = $("#collect-banner");
     if (view === "timeline") {
       banner.hidden = false;
-      const botN = POSTS.filter((p) => !isManual(p)).length;
-      const manualN = POSTS.filter(isManual).length;
+      const inTopic = topicPosts();
+      const botN = inTopic.filter((p) => !isManual(p)).length;
+      const manualN = inTopic.filter(isManual).length;
       banner.innerHTML = `<span class="cb-bot">🤖 Coleta automática</span>
-        <span class="cb-info"><b>${botN}</b> posts trazidos pelo bot · ${esc(dayWhen(lastRun()))}${manualN ? ` · <b>${manualN}</b> ✋ manuais` : ""}</span>
+        <span class="cb-info"><b>${botN}</b> posts do robô de <b>${esc(topicName(state.topic))}</b> · ${esc(dayWhen(lastRun()))}${manualN ? ` · <b>${manualN}</b> ✋ manuais` : ""}</span>
         <span class="cb-q"><b>${postsFor("timeline").length}</b> na fila para triagem</span>`;
     } else if (view === "curados") {
       banner.hidden = false;
       const pub = postsFor("curados");
-      const curators = new Set(pub.map((p) => state.decisions[p.id]?.by).filter(Boolean));
+      const curators = new Set(pub.map((p) => dOf(p)?.by).filter(Boolean));
       banner.innerHTML = `<span class="cb-bot cb-ws">📋 Workspace</span>
-        <span class="cb-info">origem: coleta de ${esc(dayWhen(lastRun()))} · <b>${pub.length}</b> ${pub.length === 1 ? "item curado" : "itens curados"}${curators.size ? ` por <b>${curators.size}</b> ${curators.size === 1 ? "analista" : "analistas"}` : ""}</span>
+        <span class="cb-info"><b>${esc(topicName(state.topic))}</b> · <b>${pub.length}</b> ${pub.length === 1 ? "item curado" : "itens curados"}${curators.size ? ` por <b>${curators.size}</b> ${curators.size === 1 ? "analista" : "analistas"}` : ""}</span>
         <span class="cb-q">🤝 compartilhado pela equipe</span>`;
     } else banner.hidden = true;
 
@@ -171,9 +211,9 @@
       empty.textContent = activeChip || $("#search").value
         ? "Nenhum conteúdo para esse filtro."
         : {
-            timeline: "🎉 Fila vazia! Tudo triado.",
-            curados: "Workspace vazio — nada curado ainda.",
-            reports: "Nada descartado.",
+            timeline: "🎉 Fila vazia! Tudo triado neste tópico.",
+            curados: "Workspace vazio — nada curado neste tópico ainda.",
+            reports: "Nada descartado neste tópico.",
           }[view];
       return;
     }
@@ -204,8 +244,8 @@
   // ---- card ----
   function card(p) {
     const at = handle(p.author_url || p.link, p.author);
-    const saved = state.saved[p.id];
-    const dec = state.decisions[p.id];
+    const saved = sOf(p);
+    const dec = dOf(p);
     const tags = tagsOf(p);
 
     const wrap = el("article", "pcard");
@@ -284,27 +324,29 @@
     b.title = title; b.onclick = fn; return b;
   }
 
-  // ---- ações ----
+  // ---- ações (sempre no tópico atual) ----
   function discard(p) {
-    state.decisions[p.id] = { status: "reported", by: state.user, at: now() };
+    const bag = decBag();
+    bag[p.id] = { status: "reported", by: state.user, at: now() };
     persist(); render();
-    toast(`Descartado: ${p.author}`, () => { delete state.decisions[p.id]; persist(); render(); });
+    toast(`Descartado: ${p.author}`, () => { delete bag[p.id]; persist(); render(); });
   }
-  function requeue(p) { delete state.decisions[p.id]; delete state.saved[p.id]; persist(); render(); }
+  function requeue(p) { delete decBag()[p.id]; delete savedBag()[p.id]; persist(); render(); }
 
   // 2º nível: o editor poda o Workspace. "Manter" é implícito (não fazer nada).
   function discardFromWorkspace(p) {
     if (!isEditor()) return;
-    const prev = state.decisions[p.id];
-    state.decisions[p.id] = { status: "reported", by: state.user, at: now() };
+    const bag = decBag();
+    const prev = bag[p.id];
+    bag[p.id] = { status: "reported", by: state.user, at: now() };
     persist(); render();
-    toast(`Descartado do Workspace: ${p.author}`, () => { state.decisions[p.id] = prev; persist(); render(); });
+    toast(`Descartado do Workspace: ${p.author}`, () => { bag[p.id] = prev; persist(); render(); });
   }
 
   // ---- modal curar ----
   function openModal(p) {
     modalPost = p;
-    const ex = state.saved[p.id];
+    const ex = sOf(p);
     pendingTags = [...(ex?.hashtags || p.hashtags || [])];
     $("#notes").value = ex?.notes || "";
     $("#modal-context").textContent = `${p.author} — ${(p.caption || "").slice(0, 70)}`;
@@ -327,11 +369,12 @@
   function confirmSave() {
     if (!modalPost) return;
     const id = modalPost.id;
-    const prev = state.decisions[id];
-    // primeira curadoria entra direto no Workspace, atribuída a quem curou.
-    if (!prev) state.decisions[id] = { status: "published", by: state.user, at: now() };
-    const sv = state.saved[id] || {};
-    state.saved[id] = {
+    const bagD = decBag(), bagS = savedBag();
+    const prev = bagD[id];
+    // primeira curadoria entra direto no Workspace do tópico, atribuída a quem curou.
+    if (!prev) bagD[id] = { status: "published", by: state.user, at: now() };
+    const sv = bagS[id] || {};
+    bagS[id] = {
       notes: $("#notes").value.trim(),
       hashtags: [...pendingTags],
       by: sv.by || state.user,
@@ -342,22 +385,21 @@
     toast(prev ? `Curadoria atualizada: ${a}` : `Adicionado ao Workspace: ${a}`);
   }
 
-  // ---- dashboard ----
+  // ---- dashboard (escopado ao tópico) ----
   function renderDash() {
+    const inTopic = topicPosts();
     const q = postsFor("timeline").length;
     const c = postsFor("curados").length, r = postsFor("reports").length;
-    const total = POSTS.length;
+    const total = inTopic.length;
     const counts = {};
-    POSTS.filter((p) => state.decisions[p.id]?.status === "published")
+    inTopic.filter((p) => dOf(p)?.status === "published")
       .forEach((p) => tagsOf(p).forEach((t) => (counts[t.toLowerCase()] = (counts[t.toLowerCase()] || 0) + 1)));
     const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
 
-    // produção por analista (curadoria que está no Workspace)
     const byAnalyst = {};
-    POSTS.forEach((p) => {
-      const d = state.decisions[p.id];
-      if (d && d.status === "published" && d.by)
-        byAnalyst[d.by] = (byAnalyst[d.by] || 0) + 1;
+    inTopic.forEach((p) => {
+      const d = dOf(p);
+      if (d && d.status === "published" && d.by) byAnalyst[d.by] = (byAnalyst[d.by] || 0) + 1;
     });
     const analystRows = USERS.filter((u) => u.role === "analyst").map((u) =>
       `<span class="tag">${esc(u.name)} <b>${byAnalyst[u.id] || 0}</b></span>`).join("");
@@ -366,9 +408,9 @@
       <div class="stat accent"><div class="n">${q}</div><div class="l">Na fila para triagem</div></div>
       <div class="stat"><div class="n">${c}</div><div class="l">No Workspace</div></div>
       <div class="stat"><div class="n">${r}</div><div class="l">Descartados</div></div>
-      <div class="stat"><div class="n">${total ? Math.round(((c + r) / total) * 100) : 0}%</div><div class="l">Progresso da triagem</div></div>
+      <div class="stat"><div class="n">${total ? Math.round(((c + r) / total) * 100) : 0}%</div><div class="l">Progresso do tópico</div></div>
       <div class="stat dash-wide">
-        <h3>Curadoria por analista</h3>
+        <h3>Curadoria por analista — ${esc(topicName(state.topic))}</h3>
         <div class="toplist">${analystRows || '<span class="chips-label">Sem curadoria ainda.</span>'}</div>
       </div>
       <div class="stat dash-wide">
@@ -393,10 +435,11 @@
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
-  // ---- add modal (adição manual) ----
+  // ---- add modal (adição manual no tópico atual) ----
   function openAdd() {
     $("#add-modal").hidden = false;
     $("#add-url").value = ""; $("#add-author").value = ""; $("#add-caption").value = "";
+    $("#add-topic-name").textContent = topicName(state.topic);
     updateCmd(); $("#add-url").focus();
   }
   function updateCmd() {
@@ -415,6 +458,7 @@
       metrics_simulated: true, views: 0, likes: 0, comments: 0, shares: 0,
       posted_at: "—",
       source: "manual", added_by: state.user, added_at: now(),
+      topics: [state.topic], // entra no tópico em foco
     };
     state.added.unshift(post);
     POSTS.unshift(post);
@@ -422,15 +466,22 @@
     $("#add-modal").hidden = true;
     view = "timeline"; activeChip = null; $("#search").value = "";
     render();
-    toast(`Adicionado à fila por ${me().name}: ${post.author}`);
+    toast(`Adicionado à fila de ${topicName(state.topic)}: ${post.author}`);
   }
 
-  // ---- seletor de usuário ----
+  // ---- seletores ----
   function renderUserSelect() {
     const sel = $("#user-select");
     sel.innerHTML = USERS.map((u) =>
       `<option value="${u.id}">${esc(u.name)} — ${u.role === "editor" ? "Editor" : "Analista"}</option>`).join("");
     sel.value = state.user;
+  }
+  function renderTopicSelect() {
+    const sel = $("#topic-select");
+    sel.innerHTML = TERRITORIES.map((t) =>
+      `<optgroup label="${esc(t.name)}">${t.topics.map((tp) =>
+        `<option value="${tp.id}">${esc(tp.name)}</option>`).join("")}</optgroup>`).join("");
+    sel.value = state.topic;
   }
 
   // ---- wiring ----
@@ -438,6 +489,10 @@
   function wire() {
     $$(".nav").forEach((n) => (n.onclick = () => go(n.dataset.view)));
     $$(".subtab").forEach((t) => (t.onclick = () => go(t.dataset.view)));
+    $("#topic-select").onchange = (e) => {
+      state.topic = e.target.value; activeChip = null; $("#search").value = ""; persist(); render();
+      toast(`Tópico: ${topicName(state.topic)}`);
+    };
     $("#user-select").onchange = (e) => { state.user = e.target.value; persist(); render(); toast(`Você agora é ${me().name}`); };
     $("#search").addEventListener("input", render);
     $("#search-btn").onclick = render;
@@ -463,5 +518,5 @@
     });
   }
 
-  loadPosts().then((d) => { POSTS = [...state.added, ...d]; renderUserSelect(); wire(); render(); });
+  loadPosts().then((d) => { POSTS = [...state.added, ...d]; renderUserSelect(); renderTopicSelect(); wire(); render(); });
 })();

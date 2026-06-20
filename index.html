@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cultura Monitor — Curadoria & Análise</title>
+  <title>Culture Monitor — Curadoria & Análise</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -11,10 +11,14 @@
   <header class="appbar">
     <div class="appbar-left">
       <span class="brand-badge">☺</span>
-      <span class="brand-name">Cultura Monitor <small>v1</small></span>
-      <nav class="crumbs">Configuração <span class="sep">›</span> Minha Conta</nav>
+      <span class="brand-name">Culture Monitor <small>v1</small></span>
+      <nav class="crumbs" id="crumbs"></nav>
     </div>
     <div class="appbar-right">
+      <label class="userpick">
+        <span class="userpick-label">Tópico:</span>
+        <select id="topic-select"></select>
+      </label>
       <label class="userpick">
         <span class="userpick-label">Você:</span>
         <select id="user-select"></select>
@@ -103,9 +107,9 @@
         <button class="icon-btn" id="add-close" aria-label="Fechar">✕</button>
       </header>
       <div class="modal-body">
-        <p class="modal-context">A fila é alimentada pela <b>coleta automática do bot</b> toda
-          madrugada. Use isto para incluir um post <b>pontualmente</b>, fora desse ciclo — ele
-          entra na fila marcado como <b>✋ manual</b>, atribuído a você.</p>
+        <p class="modal-context">A fila é alimentada pela <b>coleta automática</b> do robô do tópico
+          toda madrugada. Use isto para incluir um post <b>pontualmente</b>, fora desse ciclo — ele
+          entra na fila de <b id="add-topic-name">—</b> marcado como <b>✋ manual</b>, atribuído a você.</p>
         <label>URL do vídeo
           <input id="add-url" type="text" placeholder="https://www.tiktok.com/@usuario/video/123…" />
         </label>

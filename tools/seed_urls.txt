@@ -1,11 +1,42 @@
 # URLs de videos REAIS do TikTok para semear o mockup.
 # O fetcher pula silenciosamente qualquer URL invalida/removida.
 # Adicione as suas e rode:  python3 tools/fetch.py --file tools/seed_urls.txt
+
+# --- originais que ainda resolvem ---
 https://www.tiktok.com/@zachking/video/6768504823336815877
 https://www.tiktok.com/@scout2015/video/6718335390845095173
 https://www.tiktok.com/@looooooooch/video/7441916545665600776
-https://www.tiktok.com/@zachking/video/6749520780411293957
-https://www.tiktok.com/@khaby.lame/video/7105861992422180614
-https://www.tiktok.com/@bellapoarch/video/6862153058223197445
-https://www.tiktok.com/@gordonramsayofficial/video/7012710295621913862
-https://www.tiktok.com/@nasa/video/7012345678901234567
+
+# --- Esportes / Basquete (NBA) ---
+https://www.tiktok.com/@nba/video/7651115058684087582
+https://www.tiktok.com/@nba/video/7487276726570011950
+https://www.tiktok.com/@nba/video/7384982327237053726
+https://www.tiktok.com/@nba/video/7511012131496545566
+https://www.tiktok.com/@nba/video/7483687136143723807
+https://www.tiktok.com/@nba/video/7492849790582115615
+
+# --- Esportes / Surf ---
+https://www.tiktok.com/@itskoasmith/video/7322607575634119967
+https://www.tiktok.com/@surftock/video/7440527437378817326
+https://www.tiktok.com/@nicvonrupp/video/7392329578481487137
+https://www.tiktok.com/@unilad/video/7421109049934073120
+https://www.tiktok.com/@thatsurfguy_/video/7255776078470352174
+https://www.tiktok.com/@surfabove/video/7335997137378889003
+
+# --- Esportes / Volei ---
+https://www.tiktok.com/@justwomenssports/video/7481349921417809207
+https://www.tiktok.com/@volley_grail/video/7299102034534419744
+https://www.tiktok.com/@justwomenssports/video/7281006620191051014
+https://www.tiktok.com/@bigtennetwork/video/7280207004491091242
+https://www.tiktok.com/@espn/video/7508603023954857247
+https://www.tiktok.com/@volleyvision50/video/7647013499536739592
+
+# --- Musica / Rap & Trap ---
+https://www.tiktok.com/@ilovehiphopvn/video/7647129632403229972
+https://www.tiktok.com/@under.freestyle.ig/video/7431701389945965829
+https://www.tiktok.com/@under.freestyle.ig/video/7454036968284998918
+https://www.tiktok.com/@faaaaceo/video/7425252200592461089
+https://www.tiktok.com/@freestylerap1/video/7597461192646348053
+
+# --- Cinema, TV & Streaming / Series ---
+https://www.tiktok.com/@netflix/video/7480530943967759662
