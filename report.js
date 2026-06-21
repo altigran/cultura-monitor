@@ -144,7 +144,29 @@
     A.insight = sub(pick(T.insight));
     A.acionavel = A.categoria !== "conversa_em_alta" ? Math.random() > 0.15 : Math.random() > 0.5;
   }
-  function genSection(sec) { sec.assuntos.forEach(genAssunto); if (!sec.intro) sec.intro = pick(["Os destaques do dia.", "O que move a conversa agora.", "Selecionados pela curadoria."]); }
+  const INTROS = ["Os destaques do dia.", "O que move a conversa agora.", "Selecionados pela curadoria.", "Sinais culturais em alta hoje."];
+  function placedPids() { const s = new Set(); report.sections.forEach((sec) => sec.assuntos.forEach((A) => A.posts.forEach((p) => s.add(String(p))))); return s; }
+  function unplaced() { const used = placedPids(); return workspaceItems().filter((i) => !used.has(i.pid) && (!report.brand || (i.saved.marcas || []).includes(report.brand))); }
+  // Gera a seção: puxa itens curados do Workspace (se faltam) e preenche os assuntos.
+  function genSection(sec) {
+    const pool = unplaced();
+    while (sec.assuntos.length < 3 && pool.length) sec.assuntos.push(mkAssunto(pool.shift().pid));
+    sec.assuntos.forEach(genAssunto);
+    if (!sec.intro) sec.intro = pick(INTROS);
+    return sec.assuntos.length;
+  }
+  // Gera o relatório todo: distribui os itens curados pelas seções e preenche tudo.
+  function genReport() {
+    const pool = unplaced();
+    const ring = report.sections.filter((s) => s.type !== "Capa");
+    const targets = ring.length ? ring : report.sections;
+    let i = 0;
+    while (pool.length && targets.length) { targets[i % targets.length].assuntos.push(mkAssunto(pool.shift().pid)); i++; }
+    report.sections.forEach((sec) => { sec.assuntos.forEach(genAssunto); if (!sec.intro) sec.intro = pick(INTROS); });
+    const total = report.sections.reduce((n, s) => n + s.assuntos.length, 0);
+    if (!total) { alert("Nenhum conteúdo curado no Workspace" + (report.brand ? " para a marca " + report.brand : "") + ". Cure posts no app de Curadoria primeiro."); return; }
+    persist(); render();
+  }
 
   // ---- render ----
   function render() {
@@ -189,7 +211,7 @@
     const titleIn = el("input", "rb-sec-title"); titleIn.value = sec.title; titleIn.placeholder = "Título da seção";
     titleIn.addEventListener("input", (e) => { sec.title = e.target.value; persist(); });
     head.appendChild(titleIn);
-    const gen = el("button", "rb-gen", "✨ Gerar seção"); gen.onclick = () => { genSection(sec); persist(); render(); };
+    const gen = el("button", "rb-gen", "✨ Gerar seção"); gen.onclick = () => { const n = genSection(sec); persist(); render(); if (!n) alert("Sem conteúdo curado disponível" + (report.brand ? " para a marca " + report.brand : "") + ". Cure posts primeiro."); };
     head.appendChild(gen);
     const del = el("button", "rb-x", "✕"); del.title = "remover seção"; del.onclick = () => { report.sections = report.sections.filter((s) => s.id !== sec.id); persist(); render(); };
     head.appendChild(del);
@@ -302,7 +324,7 @@
   async function loadPosts() { if (Array.isArray(window.__POSTS__)) return window.__POSTS__; try { return await (await fetch("data/posts.json")).json(); } catch { return []; } }
   function wire() {
     $("#btn-preview").onclick = () => { previewing = !previewing; picker = null; render(); };
-    $("#btn-gen").onclick = () => { report.sections.forEach(genSection); persist(); render(); };
+    $("#btn-gen").onclick = genReport;
     $("#btn-new").onclick = () => { if (!confirm("Novo report: mantém a estrutura das seções e limpa o conteúdo (assuntos) e a edição. Continuar?")) return; newReport(); previewing = false; picker = null; render(); };
   }
   loadPosts().then((d) => { POSTS = d; wire(); render(); });
