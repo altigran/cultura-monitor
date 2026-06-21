@@ -140,3 +140,19 @@ Posts de inclusão humana (manual) entram na Timeline **com prioridade** — sob
 ao topo, com realce visual (chip "★ prioritário" + borda). Alinha com o Lucas
 (reunião 18/06): contribuição humana entra "com peso de super selecionado, lado a
 lado com o automático".
+
+## D13 — Eixo do relatório e mapeamento Território ↔ Marca
+**Status:** Em aberto (perguntar ao Lucas na reunião)
+
+O relatório é **por cliente (Marca)** + **seções editoriais** (📄 deck), puxando
+de vários territórios/tópicos. Território/tópico são **input** (monitoramento/
+curadoria) + filtro de personalização — **não** o eixo do relatório. Por tópico
+não escala; por território é filtro, não unidade.
+
+**Aberto — como a Marca se liga aos territórios?** Há dois mecanismos no deck:
+(1) **"Marca vinculada"** por item (curador marca o conteúdo); (2) **"territórios
+de foco"** por marca (config — *"foco na categoria e/ou territórios de marca"*).
+Proposta: relatório da marca = conteúdo nos **territórios de foco** + itens
+**vinculados** (pins); Marca = Geral → "geralzão". **A validar com Lucas:** o mapa
+marca→territórios é config explícita? quais por cliente? usa os dois mecanismos
+ou só território de foco? (mockup ainda não implementa o mapa marca→territórios.)
