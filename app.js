@@ -497,33 +497,48 @@
     const botCurados = curados - manualCurados;
     const acertoPct = botCurados ? Math.round((acertos / botCurados) * 100) : 0;
 
-    const rows = ALL_TOPICS.map((tid) => {
+    const triadoPct = coletados ? Math.round((triados / coletados) * 100) : 0;
+    const donut = (pct, label) => {
+      const r = 40, c = 2 * Math.PI * r, off = c * (1 - (pct || 0) / 100);
+      return `<div class="stat gaugecard"><div class="gauge-wrap"><svg viewBox="0 0 100 100">
+        <circle class="g-bg" cx="50" cy="50" r="${r}"/><circle class="g-fg" cx="50" cy="50" r="${r}"
+        stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 50 50)"/></svg>
+        <span class="g-val">${pct || 0}%</span></div><div class="l">${label}</div></div>`;
+    };
+    const bar = (label, pct, val) => `<div class="bar-row"><span class="bar-lbl">${esc(label)}</span><span class="bar-track"><span class="bar-fill" style="width:${Math.max(0, Math.min(100, pct))}%"></span></span><span class="bar-val">${val}</span></div>`;
+    const seg = (n, total, cls) => `<span class="seg ${cls}" style="width:${total ? (n / total * 100) : 0}%"></span>`;
+
+    const topicBars = ALL_TOPICS.map((tid) => {
       const t = porTopico[tid], tr = t.curados + t.descartados;
       const ap = tr ? Math.round((t.curados / tr) * 100) : 0;
-      return `<div class="dash-tr"><span>${esc(topicName(tid))}</span><span>${t.coletados}</span><span>${t.curados}</span><span>${t.descartados}</span><span>${ap}%</span></div>`;
+      return bar(topicName(tid), ap, `${ap}% <small>${t.curados}c·${t.descartados}d</small>`);
     }).join("");
-    const analystRows = USERS.filter((u) => u.role === "analyst").map((u) =>
-      `<span class="tag">${esc(u.name)} <b>${byAnalyst[u.id] || 0}</b></span>`).join("");
+    const analysts = USERS.filter((u) => u.role === "analyst");
+    const maxA = Math.max(1, ...analysts.map((u) => byAnalyst[u.id] || 0));
+    const analystBars = analysts.map((u) => bar(u.name, ((byAnalyst[u.id] || 0) / maxA) * 100, String(byAnalyst[u.id] || 0))).join("");
 
     $("#dashboard").innerHTML = `
       <div class="dash-period">📅 Período: <b>Hoje</b> <span class="soon">acumulado / seleção em breve</span></div>
-      <div class="stat accent"><div class="n">${aprov}%</div><div class="l">Aproveitamento (curados ÷ triados)</div></div>
-      <div class="stat"><div class="n">${coletados}</div><div class="l">Coletados (candidatos)</div></div>
-      <div class="stat"><div class="n">${curados}</div><div class="l">Curados (Workspace)</div></div>
-      <div class="stat"><div class="n">${descartados}</div><div class="l">Descartados</div></div>
-      <div class="stat"><div class="n">${acertoPct}%</div><div class="l">Acerto da pré-classificação do robô</div></div>
-      <div class="stat"><div class="n">${pend}</div><div class="l">Pendentes na fila</div></div>
-      <div class="stat"><div class="n">${manualCurados}</div><div class="l">Curados de inclusão manual</div></div>
+      ${donut(aprov, "Aproveitamento (curados ÷ triados)")}
+      ${donut(acertoPct, "Acerto da pré-classificação do robô")}
+      ${donut(triadoPct, "Triagem concluída")}
       <div class="stat dash-wide">
-        <h3>Efetividade por tópico</h3>
-        <div class="dash-table">
-          <div class="dash-tr dash-th"><span>Tópico</span><span>Coletados</span><span>Curados</span><span>Descartados</span><span>Aproveit.</span></div>
-          ${rows}
-        </div>
+        <h3>Funil de triagem <small>${coletados} coletados</small></h3>
+        <div class="stack">${seg(curados, coletados, "s-cur")}${seg(descartados, coletados, "s-desc")}${seg(pend, coletados, "s-pend")}</div>
+        <div class="legend"><span><i class="s-cur"></i> Curados ${curados}</span><span><i class="s-desc"></i> Descartados ${descartados}</span><span><i class="s-pend"></i> Pendentes ${pend}</span></div>
+      </div>
+      <div class="stat dash-wide">
+        <h3>Aproveitamento por tópico <small>(efetividade dos robôs)</small></h3>
+        <div class="bars">${topicBars}</div>
+      </div>
+      <div class="stat dash-wide">
+        <h3>Curados: robô vs inclusão manual</h3>
+        <div class="stack">${seg(botCurados, curados, "s-bot")}${seg(manualCurados, curados, "s-man")}</div>
+        <div class="legend"><span><i class="s-bot"></i> Robô ${botCurados}</span><span><i class="s-man"></i> Manual ${manualCurados}</span></div>
       </div>
       <div class="stat dash-wide">
         <h3>Curadoria por analista</h3>
-        <div class="toplist">${analystRows || '<span class="chips-label">Sem curadoria ainda.</span>'}</div>
+        <div class="bars">${analystBars || '<span class="chips-label">Sem curadoria ainda.</span>'}</div>
       </div>
       <div class="stat dash-wide soon-card">
         <h3>✨ Gerador de relatório <span class="soon">a instrumentar</span></h3>
