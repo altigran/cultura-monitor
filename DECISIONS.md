@@ -167,3 +167,7 @@ curadoria por analista, e (a instrumentar) efetividade do gerador.
 **Em aberto — granularidade:** por **tópico**, por **território** ou **geral**?
 Por ora **geral** (todos os tópicos). A decidir junto com a granularidade de
 território ([[D11]]).
+
+**Em aberto — recorte temporal:** **diário**, **acumulado** ou com **seleção de
+período**? Por ora **diário** (no mockup, um ciclo = um dia; sinalizado na tela
+como "Período: Hoje · acumulado/seleção em breve").

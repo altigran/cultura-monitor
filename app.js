@@ -506,6 +506,7 @@
       `<span class="tag">${esc(u.name)} <b>${byAnalyst[u.id] || 0}</b></span>`).join("");
 
     $("#dashboard").innerHTML = `
+      <div class="dash-period">📅 Período: <b>Hoje</b> <span class="soon">acumulado / seleção em breve</span></div>
       <div class="stat accent"><div class="n">${aprov}%</div><div class="l">Aproveitamento (curados ÷ triados)</div></div>
       <div class="stat"><div class="n">${coletados}</div><div class="l">Coletados (candidatos)</div></div>
       <div class="stat"><div class="n">${curados}</div><div class="l">Curados (Workspace)</div></div>
