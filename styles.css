@@ -39,12 +39,12 @@ button { font-family: inherit; }
 .appbar-right { display: flex; align-items: center; gap: 16px; }
 .userpick { display: flex; align-items: center; gap: 8px; }
 .userpick-label { color: #b9bdc6; font-size: 12px; font-weight: 600; }
-#topic-select {
+#user-select, #topic-select {
   background: #23262d; color: #fff; border: 1px solid #3a3e47; border-radius: 8px;
   padding: 6px 10px; font-size: 12.5px; font-weight: 600; font-family: inherit; cursor: pointer;
   max-width: 200px;
 }
-#topic-select:focus { outline: none; border-color: var(--lime); }
+#user-select:focus, #topic-select:focus { outline: none; border-color: var(--lime); }
 #topic-select optgroup { background: var(--ink); color: var(--lime); font-style: normal; }
 #topic-select option { background: #23262d; color: #fff; font-weight: 600; }
 .crumbs b { color: #fff; }
@@ -72,25 +72,6 @@ button { font-family: inherit; }
   font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px;
 }
 .nav:not(.is-active) .navcount { background: var(--line); color: var(--muted); }
-
-/* identidade do usuário no rodapé da sidebar */
-.side-user {
-  margin-top: auto; display: flex; align-items: center; gap: 9px;
-  padding: 12px 8px 4px; border-top: 1px solid var(--line);
-}
-.side-avatar {
-  width: 32px; height: 32px; border-radius: 50%; flex: none;
-  background: linear-gradient(135deg, var(--lime), #9fbf1a); color: #15171c;
-  display: grid; place-items: center; font-weight: 800; font-size: 13px;
-}
-.side-id { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
-.side-id b { font-size: 13px; color: var(--text); }
-.side-id span { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#user-select.side-switch {
-  margin-left: auto; max-width: 34px; background: none; border: none;
-  color: var(--muted); font-family: inherit; font-size: 12px; cursor: pointer;
-}
-#user-select.side-switch:focus { outline: none; }
 
 /* ---------- Conteúdo ---------- */
 .content { padding: 24px 30px 60px; max-width: 1280px; }

@@ -62,9 +62,9 @@
 
   // Equipe simulada — alimenta o seletor "Você:".
   const USERS = [
-    { id: "ana", name: "Ana Lima", role: "analyst", email: "ana@live.tt" },
-    { id: "bruno", name: "Bruno Sá", role: "analyst", email: "bruno@live.tt" },
-    { id: "duda", name: "Duda (editora)", role: "editor", email: "duda@live.tt" },
+    { id: "ana", name: "Ana Lima", role: "analyst" },
+    { id: "bruno", name: "Bruno Sá", role: "analyst" },
+    { id: "duda", name: "Duda (editora)", role: "editor" },
   ];
   const userById = (id) => USERS.find((u) => u.id === id) || USERS[0];
 
@@ -203,9 +203,6 @@
     $("#count-curados").textContent = postsFor("curados").length;
     $("#count-reports").textContent = postsFor("reports").length;
     document.body.classList.toggle("is-editor", isEditor());
-    $("#side-avatar").textContent = initials(me().name);
-    $("#side-name").textContent = me().name;
-    $("#side-email").textContent = me().email;
 
     const terr = territoryOfTopic(state.topic);
     $("#crumbs").innerHTML = `${esc(terr ? terr.name : "—")} <span class="sep">›</span> <b>${esc(topicName(state.topic))}</b>`;
