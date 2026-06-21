@@ -52,6 +52,7 @@
         <button class="subtab" data-view="curados">Workspace</button>
         <button class="subtab" data-view="reports">Descarte</button>
         <div class="search-wrap">
+          <select id="fonte-select" class="fonte-select" title="Plataforma / fonte"></select>
           <input id="search" type="search" placeholder="Pesquisar" />
           <button class="btn-ok" id="search-btn">OK</button>
         </div>
@@ -82,8 +83,21 @@
       </header>
       <div class="modal-body">
         <p id="modal-context" class="modal-context"></p>
+        <div id="modal-preclass" class="preclass"></div>
+        <label>Tipo de Expressão <span class="req">*</span>
+          <select id="tipo"></select>
+        </label>
+        <label>Contexto acionável <span class="opt">(opcional)</span>
+          <div class="tagfield">
+            <div id="contexto-list" class="taglist"></div>
+            <input id="contexto-input" type="text" placeholder="ângulo / oportunidade — digite e Enter" />
+          </div>
+        </label>
+        <label>Marca vinculada <span class="opt">(opcional)</span>
+          <div id="marca-chips" class="marca-chips"></div>
+        </label>
         <label>Anotações do analista
-          <textarea id="notes" rows="4" placeholder="Por que este post é relevante? Contexto, ângulo, território, fonte…"></textarea>
+          <textarea id="notes" rows="3" placeholder="Por que este post é relevante? Ângulo, fonte…"></textarea>
         </label>
         <label>Hashtags / tags
           <div class="tagfield">
@@ -94,7 +108,7 @@
       </div>
       <footer class="modal-foot">
         <button class="btn ghost" id="modal-cancel">Cancelar</button>
-        <button class="btn primary" id="modal-confirm">Salvar no Workspace</button>
+        <button class="btn primary" id="modal-confirm">Aprovar conteúdo</button>
       </footer>
     </div>
   </div>
@@ -107,9 +121,10 @@
         <button class="icon-btn" id="add-close" aria-label="Fechar">✕</button>
       </header>
       <div class="modal-body">
-        <p class="modal-context">A fila é alimentada pela <b>coleta automática</b> do robô do tópico
-          toda madrugada. Use isto para incluir um post <b>pontualmente</b>, fora desse ciclo — ele
-          entra na fila de <b id="add-topic-name">—</b> marcado como <b>✋ manual</b>, atribuído a você.</p>
+        <p class="modal-context">A fila é alimentada pela <b>coleta automática</b> do robô do tópico.
+          Isto é a inclusão <b>tradicional</b> — quando você acha um post por conta própria (ex.: num
+          perfil que acompanha). Entra na fila de <b id="add-topic-name">—</b> como <b>✋ manual</b>,
+          atribuído a você, <b>sem pré-classificação</b> — você classifica ao curar.</p>
         <label>URL do vídeo
           <input id="add-url" type="text" placeholder="https://www.tiktok.com/@usuario/video/123…" />
         </label>

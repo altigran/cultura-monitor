@@ -44,6 +44,22 @@
   };
   const territoryOfTopic = (id) => TERRITORIES.find((t) => t.topics.some((x) => x.id === id)) || null;
 
+  // Eixos de classificação adicionais (modelo do deck).
+  // Tipo de Expressão: vocabulário "chutado"; o robô pré-classifica (ver botTipo).
+  const TIPOS = ["Comunidade", "Meme", "Formato", "Tendência", "Notícia"];
+  // Marcas vinculáveis = "Clientes atuais" do deck.
+  const CLIENTES = ["Amstel", "TikTok", "Eletrolux", "Mondelez", "Riachuelo", "Stanley"];
+
+  // Plataformas (a ferramenta é multiplataforma; hoje só TikTok está ativo).
+  const PLATFORMS = [
+    { id: "tiktok", name: "TikTok" },
+    { id: "instagram", name: "Instagram" },
+    { id: "x", name: "X" },
+  ];
+  const ACTIVE_PLATFORMS = ["tiktok"]; // os demais entram "em breve"
+  const platformOf = (p) => p.platform || "tiktok";
+  const platformName = (id) => (PLATFORMS.find((p) => p.id === id) || {}).name || id;
+
   // Equipe simulada — alimenta o seletor "Você:".
   const USERS = [
     { id: "ana", name: "Ana Lima", role: "analyst" },
@@ -56,8 +72,11 @@
   let state = load();
   let view = "timeline";
   let activeChip = null;
+  let activePlatform = "todas";
   let modalPost = null;
   let pendingTags = [];
+  let pendingContextos = [];
+  let pendingMarcas = [];
 
   const me = () => userById(state.user);
   const isEditor = () => me().role === "editor";
@@ -130,6 +149,12 @@
       ? `✋ Adicionado por ${esc(nameOf(p.added_by))} ${esc(whenLabel(p.added_at))}`
       : `🤖 Coletado ${esc(dayWhen(lastRun()))}`;
   }
+  // Tipo de Expressão pré-classificado pelo robô (manual não vem classificado).
+  function botTipo(p) {
+    if (isManual(p)) return "";
+    const h = String(p.id).split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+    return TIPOS[h % TIPOS.length];
+  }
 
   // Pertinência por tópico (com sobreposição). Posts manuais trazem .topics
   // explícito; para o dataset, distribuição determinística pelo id.
@@ -146,7 +171,9 @@
     const inTopic = topicPosts();
     if (v === "curados") return inTopic.filter((p) => dOf(p)?.status === "published");
     if (v === "reports") return inTopic.filter((p) => dOf(p)?.status === "reported");
-    return inTopic.filter((p) => !dOf(p)); // timeline
+    // timeline: contribuição humana (manual) entra com prioridade — sobe ao topo.
+    const pending = inTopic.filter((p) => !dOf(p));
+    return [...pending.filter(isManual), ...pending.filter((p) => !isManual(p))];
   }
   function tagsOf(p) {
     const s = sOf(p);
@@ -155,6 +182,7 @@
   function applyFilters(list) {
     const q = $("#search").value.trim().toLowerCase();
     return list.filter((p) => {
+      if (activePlatform !== "todas" && platformOf(p) !== activePlatform) return false;
       if (activeChip && !tagsOf(p).map((t) => t.toLowerCase()).includes(activeChip)) return false;
       if (q) return (p.author + " " + p.caption + " " + tagsOf(p).join(" ")).toLowerCase().includes(q);
       return true;
@@ -248,20 +276,25 @@
     const dec = dOf(p);
     const tags = tagsOf(p);
 
-    const wrap = el("article", "pcard");
+    const wrap = el("article", "pcard" + (isManual(p) && view === "timeline" ? " is-priority" : ""));
 
     // topo: status + autoria + ações
     const top = el("div", "pcard-top");
     const sc = el("div", "status-chips");
     if (view === "curados") {
       sc.appendChild(el("span", "status curado", "Curado"));
+      if (saved?.tipoExpressao) sc.appendChild(el("span", "status tipo", esc(saved.tipoExpressao)));
+      (saved?.marcas || []).forEach((m) => sc.appendChild(el("span", "status marca", "● " + esc(m))));
       if (dec?.by) sc.appendChild(el("span", "status by", `por ${esc(nameOf(dec.by))}`));
     } else if (view === "reports") {
       sc.appendChild(el("span", "status report", "Descartado"));
       if (dec?.by) sc.appendChild(el("span", "status by", `por ${esc(nameOf(dec.by))}`));
     } else {
-      if (isManual(p)) sc.appendChild(el("span", "status manual", "✋ manual"));
-      tags.slice(0, 2).forEach((t) => sc.appendChild(el("span", "status", "#" + t)));
+      sc.appendChild(el("span", "status pending", "⏳ Curadoria pendente"));
+      if (isManual(p)) {
+        sc.appendChild(el("span", "status priority", "★ prioritário"));
+        sc.appendChild(el("span", "status manual", "✋ manual"));
+      } else sc.appendChild(el("span", "status tipo", esc(botTipo(p))));
     }
     top.appendChild(sc);
     top.appendChild(actionsFor(p));
@@ -271,15 +304,24 @@
     const main = el("div", "pcard-main");
     const thumb = el("a", "pcard-thumb");
     thumb.href = p.link; thumb.target = "_blank"; thumb.rel = "noopener";
+    const platBadge = `<span class="plat">${esc(platformName(platformOf(p)))}</span>`;
     thumb.innerHTML = p.thumbnail
       ? `<img loading="lazy" src="${p.thumbnail}" alt="thumb de ${esc(p.author)}" onerror="this.style.opacity=.2">
-         <span class="views">▶ ${fmt(p.views)}</span>`
-      : `<span class="thumb-ph">✋<small>sem prévia</small></span>`;
+         ${platBadge}<span class="views">▶ ${fmt(p.views)}</span>`
+      : `${platBadge}<span class="thumb-ph">✋<small>sem prévia</small></span>`;
     main.appendChild(thumb);
 
     const stamp =
       view === "curados" && dec
         ? `<div class="pcard-stamp">Curado por <b>${esc(nameOf(dec.by))}</b> ${esc(whenLabel(dec.at))}</div>`
+        : "";
+
+    const terrN = territoryOfTopic(state.topic)?.name || "—";
+    const classLine =
+      view === "curados"
+        ? `<div class="pcard-class"><b>${esc(terrN)} ▸ ${esc(topicName(state.topic))}</b>${
+            (saved?.contextos || []).length ? " · " + saved.contextos.map((c) => `<span class="ctx">▸ ${esc(c)}</span>`).join(" ") : ""
+          }</div>`
         : "";
 
     const content = el("div", "pcard-content");
@@ -295,6 +337,7 @@
         ${metric(p.likes, "curtidas")}${metric(p.comments, "comentários")}${metric(p.shares, "compart.")}
       </div>
       ${tags.length ? `<div class="pcard-tags">${tags.map((t) => `<span class="tag">#${esc(t)}</span>`).join("")}</div>` : ""}
+      ${classLine}
       ${stamp}
       ${view === "curados" ? `<div class="pcard-note ${saved?.notes ? "" : "empty"}">${saved?.notes ? esc(saved.notes) : "Sem anotações."}</div>` : ""}
     `;
@@ -348,12 +391,20 @@
     modalPost = p;
     const ex = sOf(p);
     pendingTags = [...(ex?.hashtags || p.hashtags || [])];
+    pendingContextos = [...(ex?.contextos || [])];
+    pendingMarcas = [...(ex?.marcas || [])];
     $("#notes").value = ex?.notes || "";
+    // Tipo de Expressão: confirmado pelo curador (default = pré-classificação do robô).
+    $("#tipo").value = ex?.tipoExpressao || botTipo(p) || "";
+    const terrN = territoryOfTopic(state.topic)?.name || "—";
+    $("#modal-preclass").innerHTML = isManual(p)
+      ? `Inclusão manual — classifique abaixo. Raia: <b>${esc(terrN)} ▸ ${esc(topicName(state.topic))}</b>`
+      : `🤖 Pré-classificado pelo robô: <b>${esc(terrN)} ▸ ${esc(topicName(state.topic))}</b>`;
     $("#modal-context").textContent = `${p.author} — ${(p.caption || "").slice(0, 70)}`;
-    $("#tag-input").value = "";
-    renderTags();
+    $("#tag-input").value = ""; $("#contexto-input").value = "";
+    renderTags(); renderContextos(); renderMarcas();
     $("#modal").hidden = false;
-    $("#notes").focus();
+    $("#tipo").focus();
   }
   function closeModal() { $("#modal").hidden = true; modalPost = null; }
   function renderTags() {
@@ -366,23 +417,53 @@
     if (t && !pendingTags.includes(t)) pendingTags.push(t);
     renderTags();
   }
+  function renderContextos() {
+    $("#contexto-list").innerHTML = pendingContextos
+      .map((t, i) => `<span class="tag">▸ ${esc(t)} <button data-i="${i}" aria-label="remover">✕</button></span>`).join("");
+    $$("#contexto-list button").forEach((b) => (b.onclick = () => { pendingContextos.splice(+b.dataset.i, 1); renderContextos(); }));
+  }
+  function addContexto(raw) {
+    const t = raw.trim();
+    if (t && !pendingContextos.includes(t)) pendingContextos.push(t);
+    renderContextos();
+  }
+  function renderMarcas() {
+    $("#marca-chips").innerHTML = CLIENTES.map((c) =>
+      `<button type="button" class="marca-chip${pendingMarcas.includes(c) ? " is-on" : ""}" data-m="${esc(c)}">${esc(c)}</button>`).join("");
+    $$("#marca-chips .marca-chip").forEach((b) => (b.onclick = () => {
+      const m = b.dataset.m, i = pendingMarcas.indexOf(m);
+      if (i < 0) pendingMarcas.push(m); else pendingMarcas.splice(i, 1);
+      renderMarcas();
+    }));
+  }
+  function renderTipoOptions() {
+    $("#tipo").innerHTML = `<option value="">Selecione…</option>` +
+      TIPOS.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+  }
   function confirmSave() {
     if (!modalPost) return;
+    const tipo = $("#tipo").value;
+    if (!tipo) { // trava de completude (igual ao "Aprovar sem curar" do deck)
+      $("#tipo").focus(); toast("Tipo de Expressão é obrigatório para aprovar."); return;
+    }
     const id = modalPost.id;
     const bagD = decBag(), bagS = savedBag();
     const prev = bagD[id];
-    // primeira curadoria entra direto no Workspace do tópico, atribuída a quem curou.
+    // ao aprovar, o conteúdo entra no Workspace do tópico, atribuído a quem curou.
     if (!prev) bagD[id] = { status: "published", by: state.user, at: now() };
     const sv = bagS[id] || {};
     bagS[id] = {
       notes: $("#notes").value.trim(),
       hashtags: [...pendingTags],
+      tipoExpressao: tipo,
+      contextos: [...pendingContextos],
+      marcas: [...pendingMarcas],
       by: sv.by || state.user,
       at: sv.at || now(),
     };
     persist();
     const a = modalPost.author; closeModal(); render();
-    toast(prev ? `Curadoria atualizada: ${a}` : `Adicionado ao Workspace: ${a}`);
+    toast(prev ? `Curadoria atualizada: ${a}` : `Aprovado e adicionado ao Workspace: ${a}`);
   }
 
   // ---- dashboard (escopado ao tópico) ----
@@ -457,6 +538,7 @@
       link: url, thumbnail: "", hashtags: [],
       metrics_simulated: true, views: 0, likes: 0, comments: 0, shares: 0,
       posted_at: "—",
+      platform: "tiktok",
       source: "manual", added_by: state.user, added_at: now(),
       topics: [state.topic], // entra no tópico em foco
     };
@@ -483,6 +565,15 @@
         `<option value="${tp.id}">${esc(tp.name)}</option>`).join("")}</optgroup>`).join("");
     sel.value = state.topic;
   }
+  function renderFonteSelect() {
+    const sel = $("#fonte-select");
+    sel.innerHTML = `<option value="todas">Fonte: todas</option>` +
+      PLATFORMS.map((p) => {
+        const on = ACTIVE_PLATFORMS.includes(p.id);
+        return `<option value="${p.id}"${on ? "" : " disabled"}>${esc(p.name)}${on ? "" : " (em breve)"}</option>`;
+      }).join("");
+    sel.value = activePlatform;
+  }
 
   // ---- wiring ----
   function go(v) { view = v; activeChip = null; render(); }
@@ -494,6 +585,7 @@
       toast(`Tópico: ${topicName(state.topic)}`);
     };
     $("#user-select").onchange = (e) => { state.user = e.target.value; persist(); render(); toast(`Você agora é ${me().name}`); };
+    $("#fonte-select").onchange = (e) => { activePlatform = e.target.value; render(); };
     $("#search").addEventListener("input", render);
     $("#search-btn").onclick = render;
     $("#modal-close").onclick = $("#modal-cancel").onclick = closeModal;
@@ -502,6 +594,10 @@
     $("#tag-input").addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag($("#tag-input").value); $("#tag-input").value = ""; }
       else if (e.key === "Backspace" && !$("#tag-input").value && pendingTags.length) { pendingTags.pop(); renderTags(); }
+    });
+    $("#contexto-input").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addContexto($("#contexto-input").value); $("#contexto-input").value = ""; }
+      else if (e.key === "Backspace" && !$("#contexto-input").value && pendingContextos.length) { pendingContextos.pop(); renderContextos(); }
     });
     $("#add-content").onclick = openAdd;
     $("#add-url").addEventListener("input", updateCmd);
@@ -518,5 +614,5 @@
     });
   }
 
-  loadPosts().then((d) => { POSTS = [...state.added, ...d]; renderUserSelect(); renderTopicSelect(); wire(); render(); });
+  loadPosts().then((d) => { POSTS = [...state.added, ...d]; renderUserSelect(); renderTopicSelect(); renderFonteSelect(); renderTipoOptions(); wire(); render(); });
 })();
