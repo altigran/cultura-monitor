@@ -59,20 +59,13 @@
 .rb-additem { background: none; border: 1px dashed var(--line-2); color: #4a4f5a; border-radius: 8px;
   padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .rb-additem:hover { border-color: #15171c; color: #15171c; }
-.rb-picker { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);
-  max-height: 320px; overflow-y: auto; }
-.rb-pick-h { font-size: 11.5px; font-weight: 800; color: var(--muted); text-transform: uppercase;
-  letter-spacing: .4px; margin: 8px 2px 6px; }
-.rb-pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.rb-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 .rb-pick { display: flex; align-items: center; gap: 8px; background: var(--surface);
-  border: 1px solid var(--line-2); border-radius: 9px; padding: 6px 10px 6px 6px; cursor: pointer; text-align: left; }
+  border: 1px solid var(--line-2); border-radius: 9px; padding: 6px 10px 6px 6px; cursor: pointer; }
 .rb-pick:hover { border-color: var(--lime-strong); background: var(--surface-2); }
-.rb-pick.is-curated { border-color: rgba(46,204,113,.45); }
-.rb-pick-t { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
-.rb-pick-t b { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rb-pick-t { display: flex; flex-direction: column; line-height: 1.2; text-align: left; }
+.rb-pick-t b { font-size: 12.5px; }
 .rb-pick-t small { font-size: 11px; color: var(--muted); }
-.rb-badge { font-size: 10px; font-weight: 800; background: rgba(46,204,113,.14); color: #1e9e57;
-  border: 1px solid rgba(46,204,113,.3); padding: 1px 6px; border-radius: 999px; }
 
 .rb-addsec { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
 .rb-addsec > span { font-size: 12.5px; color: var(--muted); font-weight: 600; }
