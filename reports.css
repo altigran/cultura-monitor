@@ -101,4 +101,51 @@
 .rp-ctx { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
 .rp-ctx span { font-size: 11px; background: #15171c; color: #fff; padding: 2px 8px; border-radius: 6px; }
 
+/* ---------- Geração (✨) ---------- */
+.btn-gen { background: #15171c; color: #fff; border: 1px solid #15171c; border-radius: 9px;
+  padding: 10px 16px; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.btn-gen:hover { background: #000; }
+.rb-gen { background: #15171c; color: var(--lime); border: none; border-radius: 8px;
+  padding: 6px 11px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.rb-gen:hover { background: #000; }
+.rb-gen.sm { padding: 4px 8px; font-size: 13px; }
+
+.rb-pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+
+/* ---------- Assunto (card) ---------- */
+.rb-ass { border: 1px solid var(--line-2); border-radius: 11px; padding: 12px; margin-bottom: 10px; background: var(--surface-2); }
+.rb-ass-head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.rb-ass-n { background: #15171c; color: #fff; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 6px; }
+.rb-ass-title { flex: 1; min-width: 80px; background: var(--surface); border: 1px solid var(--line); border-radius: 7px;
+  padding: 6px 9px; font-size: 14px; font-weight: 700; color: var(--text); font-family: inherit; }
+.rb-ass-title:focus { outline: none; border-color: #15171c; }
+.rb-cat { background: var(--surface); border: 1px solid var(--line-2); border-radius: 7px; padding: 6px 8px;
+  font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; }
+.rb-acion { border: 1px solid var(--line-2); border-radius: 999px; padding: 5px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.rb-acion.on { background: rgba(46,204,113,.12); color: #1e9e57; border-color: rgba(46,204,113,.35); }
+.rb-acion.off { background: rgba(232,72,77,.1); color: var(--danger); border-color: rgba(232,72,77,.3); }
+.rb-field { width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 10px; font-size: 13px; font-family: inherit; color: var(--text); margin-bottom: 8px; resize: vertical; }
+.rb-field:focus { outline: none; border-color: #15171c; }
+.rb-field.note { border-left: 3px solid var(--lime); }
+.rb-ass-posts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.rb-ppost { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 999px; padding: 3px 9px 3px 3px; font-size: 12px; }
+.rb-ppost img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
+.rb-ppost-x { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 11px; }
+.rb-ppost-x:hover { color: var(--danger); }
+.rb-addpost { background: none; border: 1px dashed var(--line-2); color: #4a4f5a; border-radius: 999px; padding: 4px 11px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.rb-addpost:hover { border-color: #15171c; color: #15171c; }
+.rb-ass-m { font-size: 11.5px; color: var(--muted); font-weight: 600; margin-top: 8px; }
+
+/* ---------- Preview: assunto ---------- */
+.rp-ass { background: rgba(255,255,255,.7); border-radius: 12px; padding: 13px; margin-bottom: 12px; }
+.rp-ass-h { font-size: 15px; color: #15171c; margin-bottom: 5px; }
+.rp-tags { font-size: 12px; color: #2a2c30; margin-bottom: 6px; }
+.rp-resumo { font-size: 13px; color: #1c1f26; margin-bottom: 6px; line-height: 1.45; }
+.rp-cat { font-size: 12.5px; font-weight: 700; color: #15171c; margin-bottom: 6px; }
+.rp-thumbs { display: flex; gap: 6px; margin-top: 8px; }
+.rp-th { width: 44px; aspect-ratio: 9/14; border-radius: 7px; overflow: hidden; background: #000; display: grid; place-items: center; color: #fff; }
+.rp-th img { width: 100%; height: 100%; object-fit: cover; }
+
 @media (max-width: 760px){ .rb-meta { grid-template-columns: 1fr 1fr; } }
