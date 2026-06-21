@@ -156,3 +156,14 @@ Proposta: relatório da marca = conteúdo nos **territórios de foco** + itens
 **vinculados** (pins); Marca = Geral → "geralzão". **A validar com Lucas:** o mapa
 marca→territórios é config explícita? quais por cliente? usa os dois mecanismos
 ou só território de foco? (mockup ainda não implementa o mapa marca→territórios.)
+
+## D14 — Dashboard: foco e granularidade
+**Status:** Decidido (escopo) + em aberto (granularidade)
+
+O dashboard é **interno, de efetividade da automação** (robôs + gerador), não de
+consumo do cliente (PostHog/engajamento = fora do escopo). Métricas: aproveitamento
+(curados ÷ triados), descarte, acerto da pré-classificação do robô, volumes,
+curadoria por analista, e (a instrumentar) efetividade do gerador.
+**Em aberto — granularidade:** por **tópico**, por **território** ou **geral**?
+Por ora **geral** (todos os tópicos). A decidir junto com a granularidade de
+território ([[D11]]).

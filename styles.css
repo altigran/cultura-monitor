@@ -255,6 +255,16 @@ button { font-family: inherit; }
 .toplist { display: flex; flex-wrap: wrap; gap: 8px; }
 .toplist .tag { font-size: 13px; padding: 5px 11px; }
 .toplist .tag b { color: #15171c; }
+.dash-table { display: flex; flex-direction: column; gap: 2px; }
+.dash-tr { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 8px; align-items: center;
+  padding: 8px 10px; border-radius: 8px; font-size: 13px; }
+.dash-tr:nth-child(even) { background: var(--surface-2); }
+.dash-tr span:not(:first-child) { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dash-th { font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); background: none !important; }
+.dash-th span { font-weight: 700 !important; }
+.soon-card p { margin: 6px 0 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.soon { font-size: 11px; font-weight: 800; background: rgba(217,156,28,.16); color: #b27d10;
+  border: 1px solid rgba(217,156,28,.35); padding: 2px 8px; border-radius: 999px; margin-left: 8px; }
 
 /* ---------- Modal ---------- */
 .modal { position: fixed; inset: 0; z-index: 50; background: rgba(20,23,28,.45);

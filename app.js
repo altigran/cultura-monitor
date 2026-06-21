@@ -91,7 +91,7 @@
   const sentByMe = (p) => isManual(p) ? p.added_by === state.user : (dOf(p)?.by === state.user || sOf(p)?.by === state.user);
 
   const TITLES = {
-    dashboard: ["Dashboard", "Visão geral do tópico"],
+    dashboard: ["Dashboard", "Efetividade da automação — todos os tópicos"],
     timeline: ["TimeLine", "Confira os posts recentes"],
     curados: ["Workspace", "Curado pela equipe — o editor mantém ou descarta"],
     reports: ["Descarte", "Posts descartados na triagem ou pelo editor"],
@@ -471,36 +471,62 @@
   }
 
   // ---- dashboard (escopado ao tópico) ----
+  // Dashboard GERAL — efetividade da automação (robôs + gerador), todos os tópicos.
   function renderDash() {
-    const inTopic = topicPosts();
-    const q = postsFor("timeline").length;
-    const c = postsFor("curados").length, r = postsFor("reports").length;
-    const total = inTopic.length;
-    const counts = {};
-    inTopic.filter((p) => dOf(p)?.status === "published")
-      .forEach((p) => tagsOf(p).forEach((t) => (counts[t.toLowerCase()] = (counts[t.toLowerCase()] || 0) + 1)));
-    const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
-
-    const byAnalyst = {};
-    inTopic.forEach((p) => {
-      const d = dOf(p);
-      if (d && d.status === "published" && d.by) byAnalyst[d.by] = (byAnalyst[d.by] || 0) + 1;
+    let coletados = 0, curados = 0, descartados = 0, pend = 0, acertos = 0, manualCurados = 0;
+    const porTopico = {}, byAnalyst = {};
+    ALL_TOPICS.forEach((tid) => {
+      const inT = POSTS.filter((p) => postInTopic(p, tid));
+      const dec = state.decisions[tid] || {}, sv = state.saved[tid] || {};
+      let c = 0, d = 0;
+      inT.forEach((p) => {
+        const dd = dec[p.id];
+        if (!dd) { pend++; }
+        else if (dd.status === "published") {
+          c++; curados++;
+          if (dd.by) byAnalyst[dd.by] = (byAnalyst[dd.by] || 0) + 1;
+          if (isManual(p)) manualCurados++;
+          else if (sv[p.id] && sv[p.id].tipoExpressao === botTipo(p)) acertos++; // manteve a pré-classificação
+        } else if (dd.status === "reported") { d++; descartados++; }
+      });
+      coletados += inT.length;
+      porTopico[tid] = { coletados: inT.length, curados: c, descartados: d };
     });
+    const triados = curados + descartados;
+    const aprov = triados ? Math.round((curados / triados) * 100) : 0;
+    const botCurados = curados - manualCurados;
+    const acertoPct = botCurados ? Math.round((acertos / botCurados) * 100) : 0;
+
+    const rows = ALL_TOPICS.map((tid) => {
+      const t = porTopico[tid], tr = t.curados + t.descartados;
+      const ap = tr ? Math.round((t.curados / tr) * 100) : 0;
+      return `<div class="dash-tr"><span>${esc(topicName(tid))}</span><span>${t.coletados}</span><span>${t.curados}</span><span>${t.descartados}</span><span>${ap}%</span></div>`;
+    }).join("");
     const analystRows = USERS.filter((u) => u.role === "analyst").map((u) =>
       `<span class="tag">${esc(u.name)} <b>${byAnalyst[u.id] || 0}</b></span>`).join("");
 
     $("#dashboard").innerHTML = `
-      <div class="stat accent"><div class="n">${q}</div><div class="l">Na fila para triagem</div></div>
-      <div class="stat"><div class="n">${c}</div><div class="l">No Workspace</div></div>
-      <div class="stat"><div class="n">${r}</div><div class="l">Descartados</div></div>
-      <div class="stat"><div class="n">${total ? Math.round(((c + r) / total) * 100) : 0}%</div><div class="l">Progresso do tópico</div></div>
+      <div class="stat accent"><div class="n">${aprov}%</div><div class="l">Aproveitamento (curados ÷ triados)</div></div>
+      <div class="stat"><div class="n">${coletados}</div><div class="l">Coletados (candidatos)</div></div>
+      <div class="stat"><div class="n">${curados}</div><div class="l">Curados (Workspace)</div></div>
+      <div class="stat"><div class="n">${descartados}</div><div class="l">Descartados</div></div>
+      <div class="stat"><div class="n">${acertoPct}%</div><div class="l">Acerto da pré-classificação do robô</div></div>
+      <div class="stat"><div class="n">${pend}</div><div class="l">Pendentes na fila</div></div>
+      <div class="stat"><div class="n">${manualCurados}</div><div class="l">Curados de inclusão manual</div></div>
       <div class="stat dash-wide">
-        <h3>Curadoria por analista — ${esc(topicName(state.topic))}</h3>
-        <div class="toplist">${analystRows || '<span class="chips-label">Sem curadoria ainda.</span>'}</div>
+        <h3>Efetividade por tópico</h3>
+        <div class="dash-table">
+          <div class="dash-tr dash-th"><span>Tópico</span><span>Coletados</span><span>Curados</span><span>Descartados</span><span>Aproveit.</span></div>
+          ${rows}
+        </div>
       </div>
       <div class="stat dash-wide">
-        <h3>Tags mais usadas no Workspace</h3>
-        <div class="toplist">${top.length ? top.map(([t, n]) => `<span class="tag">#${esc(t)} <b>${n}</b></span>`).join("") : '<span class="chips-label">Workspace vazio ainda.</span>'}</div>
+        <h3>Curadoria por analista</h3>
+        <div class="toplist">${analystRows || '<span class="chips-label">Sem curadoria ainda.</span>'}</div>
+      </div>
+      <div class="stat dash-wide soon-card">
+        <h3>✨ Gerador de relatório <span class="soon">a instrumentar</span></h3>
+        <p>Assuntos gerados <b>mantidos × editados × removidos</b> · <b>taxa de edição</b> · <b>% auto vs manual</b>. Requer marcar no editor o que foi gerado vs editado.</p>
       </div>`;
   }
 
