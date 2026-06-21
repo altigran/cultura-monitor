@@ -62,9 +62,9 @@
 
   // Equipe simulada — alimenta o seletor "Você:".
   const USERS = [
-    { id: "ana", name: "Ana Lima", role: "analyst" },
-    { id: "bruno", name: "Bruno Sá", role: "analyst" },
-    { id: "duda", name: "Duda (editora)", role: "editor" },
+    { id: "ana", name: "Ana Lima", role: "analyst", email: "ana@live.tt" },
+    { id: "bruno", name: "Bruno Sá", role: "analyst", email: "bruno@live.tt" },
+    { id: "duda", name: "Duda (editora)", role: "editor", email: "duda@live.tt" },
   ];
   const userById = (id) => USERS.find((u) => u.id === id) || USERS[0];
 
@@ -73,6 +73,7 @@
   let view = "timeline";
   let activeChip = null;
   let activePlatform = "todas";
+  let mineOnly = false;
   let modalPost = null;
   let pendingTags = [];
   let pendingContextos = [];
@@ -86,6 +87,8 @@
   const savedBag = () => (state.saved[state.topic] ||= {});
   const dOf = (p) => state.decisions[state.topic]?.[p.id];
   const sOf = (p) => state.saved[state.topic]?.[p.id];
+  // "Enviado por mim": minha inclusão manual, ou minha curadoria/decisão.
+  const sentByMe = (p) => isManual(p) ? p.added_by === state.user : (dOf(p)?.by === state.user || sOf(p)?.by === state.user);
 
   const TITLES = {
     dashboard: ["Dashboard", "Visão geral do tópico"],
@@ -183,6 +186,7 @@
     const q = $("#search").value.trim().toLowerCase();
     return list.filter((p) => {
       if (activePlatform !== "todas" && platformOf(p) !== activePlatform) return false;
+      if (mineOnly && !sentByMe(p)) return false;
       if (activeChip && !tagsOf(p).map((t) => t.toLowerCase()).includes(activeChip)) return false;
       if (q) return (p.author + " " + p.caption + " " + tagsOf(p).join(" ")).toLowerCase().includes(q);
       return true;
@@ -199,6 +203,9 @@
     $("#count-curados").textContent = postsFor("curados").length;
     $("#count-reports").textContent = postsFor("reports").length;
     document.body.classList.toggle("is-editor", isEditor());
+    $("#side-avatar").textContent = initials(me().name);
+    $("#side-name").textContent = me().name;
+    $("#side-email").textContent = me().email;
 
     const terr = territoryOfTopic(state.topic);
     $("#crumbs").innerHTML = `${esc(terr ? terr.name : "—")} <span class="sep">›</span> <b>${esc(topicName(state.topic))}</b>`;
@@ -586,6 +593,7 @@
     };
     $("#user-select").onchange = (e) => { state.user = e.target.value; persist(); render(); toast(`Você agora é ${me().name}`); };
     $("#fonte-select").onchange = (e) => { activePlatform = e.target.value; render(); };
+    $("#mine-only").onchange = (e) => { mineOnly = e.target.checked; render(); };
     $("#search").addEventListener("input", render);
     $("#search-btn").onclick = render;
     $("#modal-close").onclick = $("#modal-cancel").onclick = closeModal;
