@@ -582,7 +582,7 @@
   // ---- wiring ----
   function go(v) { view = v; activeChip = null; render(); }
   function wire() {
-    $$(".nav").forEach((n) => (n.onclick = () => go(n.dataset.view)));
+    $$(".nav[data-view]").forEach((n) => (n.onclick = () => go(n.dataset.view)));
     $$(".subtab").forEach((t) => (t.onclick = () => go(t.dataset.view)));
     $("#topic-select").onchange = (e) => {
       state.topic = e.target.value; activeChip = null; $("#search").value = ""; persist(); render();

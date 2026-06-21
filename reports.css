@@ -1,0 +1,104 @@
+/* Editor de Relatório — estilos específicos (usa as variáveis de styles.css). */
+
+.rb-actions { display: flex; gap: 10px; align-items: center; }
+
+/* ---------- Builder ---------- */
+.rb-meta {
+  display: grid; grid-template-columns: 2fr 1fr 1.2fr 1fr; gap: 12px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; margin-bottom: 14px;
+}
+.rb-meta label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 700; color: #4a4f5a; }
+.rb-meta input, .rb-meta select {
+  background: var(--surface-2); border: 1px solid var(--line-2); color: var(--text);
+  border-radius: 8px; padding: 9px 11px; font-size: 13.5px; font-family: inherit;
+}
+.rb-meta input:focus, .rb-meta select:focus { outline: none; border-color: #15171c; }
+
+.rb-source {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px;
+  padding: 10px 14px; font-size: 13px; color: #3a3f49; margin-bottom: 18px;
+}
+.rb-source a { color: var(--accent-2); font-weight: 700; }
+
+.rb-sec {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px; margin-bottom: 14px;
+}
+.rb-sec-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.rb-sec-type {
+  background: #15171c; color: #fff; font-size: 11px; font-weight: 800;
+  padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+}
+.rb-sec-title { flex: 1; background: none; border: none; border-bottom: 1px dashed var(--line-2);
+  font-size: 16px; font-weight: 700; color: var(--text); padding: 4px 2px; font-family: inherit; }
+.rb-sec-title:focus { outline: none; border-bottom-color: #15171c; }
+.rb-x { background: none; border: none; color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; }
+.rb-x:hover { color: var(--danger); }
+.rb-intro {
+  width: 100%; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 8px;
+  padding: 9px 11px; font-size: 13px; font-family: inherit; color: var(--text); margin-bottom: 12px; resize: vertical;
+}
+.rb-intro:focus { outline: none; border-color: #15171c; }
+
+.rb-items { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.rb-item { display: flex; gap: 12px; align-items: flex-start; background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+.rb-thumb { width: 46px; height: 60px; border-radius: 7px; overflow: hidden; background: #000; flex: none;
+  display: grid; place-items: center; color: #6b7079; font-size: 18px; }
+.rb-thumb.sm { width: 34px; height: 44px; font-size: 14px; }
+.rb-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.rb-item-body { flex: 1; min-width: 0; font-size: 13px; }
+.rb-tag { font-size: 11px; background: var(--surface); border: 1px solid var(--line); color: #5a5f6a;
+  padding: 1px 7px; border-radius: 6px; margin-left: 4px; }
+.rb-cap { color: #3a3f49; margin: 4px 0; line-height: 1.4; }
+.rb-note { background: var(--surface); border-left: 3px solid var(--lime); border-radius: 6px;
+  padding: 6px 9px; font-size: 12.5px; color: #3a3f49; }
+.rb-empty { color: var(--muted); font-style: italic; font-size: 13px; padding: 6px 2px; }
+
+.rb-additem { background: none; border: 1px dashed var(--line-2); color: #4a4f5a; border-radius: 8px;
+  padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.rb-additem:hover { border-color: #15171c; color: #15171c; }
+.rb-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.rb-pick { display: flex; align-items: center; gap: 8px; background: var(--surface);
+  border: 1px solid var(--line-2); border-radius: 9px; padding: 6px 10px 6px 6px; cursor: pointer; }
+.rb-pick:hover { border-color: var(--lime-strong); background: var(--surface-2); }
+.rb-pick-t { display: flex; flex-direction: column; line-height: 1.2; text-align: left; }
+.rb-pick-t b { font-size: 12.5px; }
+.rb-pick-t small { font-size: 11px; color: var(--muted); }
+
+.rb-addsec { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+.rb-addsec > span { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.rb-comp { background: var(--lime); border: 1px solid var(--lime-strong); color: #15171c;
+  border-radius: 999px; padding: 6px 12px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.rb-comp:hover { background: var(--lime-strong); }
+
+/* ---------- Preview (layout editorial) ---------- */
+#preview { display: flex; justify-content: center; }
+.rp-page { width: 100%; max-width: 640px; background: var(--lime); border-radius: 16px;
+  padding: 26px; box-shadow: 0 12px 40px rgba(0,0,0,.12); }
+.rp-cover { border-bottom: 2px solid #15171c; padding-bottom: 14px; margin-bottom: 18px; }
+.rp-logo { font-size: 28px; font-weight: 800; letter-spacing: -.5px; color: #15171c; }
+.rp-logo span { background: #fff; border-radius: 50%; padding: 0 4px; }
+.rp-logo b { display: block; font-size: 15px; margin-top: 2px; }
+.rp-meta { font-size: 13px; font-weight: 700; color: #15171c; margin-top: 6px; }
+.rp-sec { margin-bottom: 22px; }
+.rp-sec h2 { font-size: 20px; margin: 0 0 4px; color: #15171c; }
+.rp-intro { font-size: 13.5px; color: #2a2c30; margin: 0 0 12px; line-height: 1.5; }
+.rp-item { display: flex; gap: 14px; background: rgba(255,255,255,.65); border-radius: 12px;
+  padding: 12px; margin-bottom: 12px; }
+.rp-thumb { width: 80px; aspect-ratio: 9/14; border-radius: 9px; overflow: hidden; background: #000;
+  flex: none; display: grid; place-items: center; color: #fff; }
+.rp-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.rp-item-body { flex: 1; min-width: 0; }
+.rp-author { display: flex; align-items: center; gap: 7px; }
+.rp-av { width: 24px; height: 24px; border-radius: 50%; background: #15171c; color: var(--lime);
+  display: grid; place-items: center; font-weight: 800; font-size: 11px; }
+.rp-cap { font-size: 13.5px; color: #1c1f26; margin: 6px 0; line-height: 1.45; }
+.rp-metrics { font-size: 12px; font-weight: 700; color: #3a3f49; }
+.rp-howto { background: #15171c; color: #fff; border-radius: 8px; padding: 8px 11px; font-size: 12.5px; margin-top: 8px; line-height: 1.45; }
+.rp-howto b { color: var(--lime); }
+.rp-ctx { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.rp-ctx span { font-size: 11px; background: #15171c; color: #fff; padding: 2px 8px; border-radius: 6px; }
+
+@media (max-width: 760px){ .rb-meta { grid-template-columns: 1fr 1fr; } }
