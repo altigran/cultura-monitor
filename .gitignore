@@ -4,3 +4,5 @@
 # Materiais do cliente — conteúdo sensível, não versionar
 *.pdf
 Reunião*.txt
+# Prep de apresentação (referencia a reunião) — local
+APRESENTACAO-*.md
