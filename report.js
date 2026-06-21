@@ -45,7 +45,7 @@
   function load() {
     let r; try { r = JSON.parse(localStorage.getItem(STORE)); } catch { r = null; }
     if (!r || typeof r !== "object")
-      r = { title: "Culture Monitor", edition: "", brand: "", date: today(), sections: [{ id: uid(), type: "Capa", title: "Capa", intro: "", assuntos: [] }] };
+      r = { title: "Culture Monitor", edition: "", brand: "", date: today(), sections: defaultSections() };
     if (!Array.isArray(r.sections)) r.sections = [];
     // migração: sections antigas com items:[pid] → 1 assunto por post
     r.sections.forEach((s) => {
@@ -77,6 +77,18 @@
     const cur = curatedOf(pid), post = findPost(pid);
     return { id: uid(), titulo: "", posts: [String(pid)], resumo: "", insight: cur ? (cur.saved.notes || "") : "",
       categoria: cur && TIPO2CAT[cur.saved.tipoExpressao] || "", acionavel: true, tags: (post && post.hashtags) || [] };
+  }
+
+  // esqueleto-padrão de um report (editorias mais comuns do deck)
+  function defaultSections() {
+    return ["Capa", "Trending Topics", "TikTok Trends", "Portas de Atenção", "Sessão Temática"]
+      .map((t) => ({ id: uid(), type: t, title: t, intro: "", assuntos: [] }));
+  }
+  // novo report: MANTÉM a estrutura de seções atual, limpa o conteúdo e a edição.
+  function newReport() {
+    const tpl = (report.sections || []).map((s) => ({ id: uid(), type: s.type, title: s.title, intro: "", assuntos: [] }));
+    report = { title: report.title || "Culture Monitor", edition: "", brand: report.brand || "", date: today(), sections: tpl.length ? tpl : defaultSections() };
+    persist();
   }
 
   let report = load();
@@ -291,7 +303,7 @@
   function wire() {
     $("#btn-preview").onclick = () => { previewing = !previewing; picker = null; render(); };
     $("#btn-gen").onclick = () => { report.sections.forEach(genSection); persist(); render(); };
-    $("#btn-new").onclick = () => { if (!confirm("Começar um novo report? O rascunho atual será descartado.")) return; localStorage.removeItem(STORE); report = load(); previewing = false; picker = null; render(); };
+    $("#btn-new").onclick = () => { if (!confirm("Novo report: mantém a estrutura das seções e limpa o conteúdo (assuntos) e a edição. Continuar?")) return; newReport(); previewing = false; picker = null; render(); };
   }
   loadPosts().then((d) => { POSTS = d; wire(); render(); });
 })();
