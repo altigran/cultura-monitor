@@ -211,7 +211,8 @@
     const titleIn = el("input", "rb-sec-title"); titleIn.value = sec.title; titleIn.placeholder = "Título da seção";
     titleIn.addEventListener("input", (e) => { sec.title = e.target.value; persist(); });
     head.appendChild(titleIn);
-    const gen = el("button", "rb-gen", "✨ Gerar seção"); gen.onclick = () => { const n = genSection(sec); persist(); render(); if (!n) alert("Sem conteúdo curado disponível" + (report.brand ? " para a marca " + report.brand : "") + ". Cure posts primeiro."); };
+    const gen = el("button", "rb-gen", "✨ Gerar seção"); gen.title = "Gerar com IA (simulado)";
+    gen.onclick = () => { const n = genSection(sec); persist(); render(); if (!n) alert("Sem conteúdo curado disponível" + (report.brand ? " para a marca " + report.brand : "") + ". Cure posts primeiro."); };
     head.appendChild(gen);
     const del = el("button", "rb-x", "✕"); del.title = "remover seção"; del.onclick = () => { report.sections = report.sections.filter((s) => s.id !== sec.id); persist(); render(); };
     head.appendChild(del);
@@ -244,7 +245,7 @@
     const acion = el("button", "rb-acion " + (A.acionavel ? "on" : "off"), A.acionavel ? "✅ Acionável" : "❌ Não acionável");
     acion.onclick = () => { A.acionavel = !A.acionavel; persist(); render(); };
     head.appendChild(acion);
-    const g = el("button", "rb-gen sm", "✨"); g.title = "Gerar este assunto"; g.onclick = () => { genAssunto(A); persist(); render(); };
+    const g = el("button", "rb-gen sm", "✨"); g.title = "Gerar assunto com IA (simulado)"; g.onclick = () => { genAssunto(A); persist(); render(); };
     head.appendChild(g);
     const rm = el("button", "rb-x", "✕"); rm.title = "remover assunto"; rm.onclick = () => { sec.assuntos = sec.assuntos.filter((x) => x.id !== A.id); persist(); render(); };
     head.appendChild(rm);
