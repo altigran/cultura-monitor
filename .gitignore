@@ -1,2 +1,6 @@
 .DS_Store
 *.log
+
+# Materiais do cliente — conteúdo sensível, não versionar
+*.pdf
+Reunião*.txt
