@@ -1,98 +1,111 @@
 # Culture Monitor — mockup (TikTok)
 
-Mockup de **curadoria de conteúdo cultural** do TikTok no modelo da live.tt.
-Um robô coleta posts por **tópico**; analistas fazem a triagem e um editor
-faz o 2º nível. Tudo é organizado pela hierarquia **Território ▸ Tópico**.
+Mockup do produto **Culture Monitor** (live.tt): curadoria de conteúdo cultural
+do TikTok e geração do relatório diário. Três telas:
+
+1. **Curadoria** (`index.html`) — robôs coletam posts por **tópico**; analistas
+   triam e um editor faz o 2º nível.
+2. **Editor de relatório** (`reports.html`) — monta o relatório a partir do que
+   foi curado, com **geração assistida (IA, simulada)**.
+3. **Dashboard** (dentro de `index.html`) — indicadores de **efetividade da
+   automação**.
+
+> É um mockup **vanilla** (HTML/CSS/JS, sem build e sem dependências). Estado em
+> `localStorage`. Publicado via GitHub Pages.
+> **Decisões e questões em aberto:** ver [`DECISIONS.md`](DECISIONS.md).
+> **Para continuar o projeto:** ver [`HANDOFF.md`](HANDOFF.md).
 
 ## Como abrir
 
 Duplo-clique em `index.html` (funciona via `file://` — os dados são embutidos
-em `data/posts.js`).
-
-Ou sirva localmente, se preferir:
+em `data/posts.js`). Ou sirva localmente:
 
 ```bash
-python3 -m http.server 8000
-# abra http://localhost:8000
+python3 -m http.server 8000   # abra http://localhost:8000
 ```
+
+Online: https://altigran.github.io/cultura-monitor/
 
 ## Conceitos (modelo live.tt)
 
-- **Território** — macrotema cultural amplo (Esportes, Música, Cinema/TV &
-  Streaming). Só agrupa tópicos; não tem tela própria.
-- **Tópico** — recorte acionável dentro do território (Vôlei, Basquete, Surf,
-  Pop, Rap & Trap, Séries, Estreias). **Cada tópico tem um robô** que coleta
-  candidatos usando suas palavras-chave (afinidade *fuzzy* → supercoleta).
-- **Curadoria por tópico** — o analista escolhe um tópico (seletor "Tópico:"
-  no topo) e trabalha **só aquela raia**. A decisão é por **(tópico × post)**:
-  um mesmo post pode ser coletado por vários tópicos (**sobreposição**) e ter
-  destinos diferentes em cada um.
+- **Território** — macrotema cultural (Esportes, Música, Cinema/TV & Streaming).
+  Agrupa tópicos; não tem tela própria.
+- **Tópico** — recorte acionável (Vôlei, Basquete, Surf, Pop, Rap, Séries,
+  Estreias). **Cada tópico tem um robô** que coleta por palavras-chave.
+- **Curadoria por tópico** — decisão por **(tópico × post)**; um post pode estar
+  em vários tópicos (**sobreposição**) com destinos diferentes.
 
 ## O ciclo
 
 ```
 🤖 robô do tópico (coleta na madrugada)
         │
-   📥 Timeline (fila) ─analista cura─▶ 📋 Workspace ─editor descarta─▶ 🗑️ Descarte
-                      └─analista descarta────────────────────────────▶ 🗑️ Descarte
+   📥 Timeline ─analista cura─▶ 📋 Workspace ─editor descarta─▶ 🗑️ Descarte
+              └─analista descarta──────────────────────────────▶ 🗑️ Descarte
+                                   │
+                                   ▼
+                       📄 Editor de relatório  (Assuntos + ✨ Gerar)
 ```
 
-Pós-moderação em 2 níveis: o analista cura e o post **já entra no Workspace**
-(compartilhado pela equipe); o **editor** então mantém (implícito) ou descarta.
-Cada decisão registra **quem** e **quando**.
+Pós-moderação em 2 níveis: o analista cura → entra no **Workspace** (compartilhado);
+o **editor** mantém (implícito) ou descarta. O **relatório** deriva do Workspace.
 
-## Funcionalidades
+## Curadoria (`index.html`)
 
-- **Seletor Território ▸ Tópico** no topo + breadcrumb do contexto atual.
-- **Seletor "Você:"** (papéis): analistas e editor. Só o editor descarta do
-  Workspace (2º nível); o botão ✓ é exclusivo dele.
-- **Timeline / Workspace / Descarte** com contadores, **escopados ao tópico**.
-- **Proveniência da coleta**: banner do robô do tópico ("ontem 03:14") e, em
-  cada card, "🤖 coletado" vs "📅 publicado na rede" (timestamps distintos).
-- **Adição manual** (botão "✋ Adicionar manualmente"): inclui um post no tópico
-  em foco, marcado `✋ manual` e atribuído a você — distinto da coleta do robô.
-- **Curar** abre um modal para anotações do analista + hashtags (chips).
-- **Descartar** com *Desfazer*; devolver itens à fila.
-- **Dashboard por tópico**: fila/Workspace/descartados, curadoria por analista,
-  tags mais usadas.
-- Busca por autor, legenda ou hashtag.
-- Estado persiste em `localStorage` (`curator.v3`), simulando o banco
-  **compartilhado**. A troca de usuário/tópico é simulada no mesmo navegador;
-  sincronizar entre máquinas exige um backend, que a camada `load/persist`
-  deixa pronta para substituir.
+- **Seletores** no topo: **Território ▸ Tópico** (contexto) e **"Você:"** (papel —
+  analistas e editor). Só o editor descarta do Workspace.
+- **Timeline / Workspace / Descarte** escopados ao tópico, com contadores.
+- **Proveniência**: banner do robô + selo "🤖 coletado" vs "📅 publicado na rede".
+- **Curar** abre o modal de classificação (modelo do deck): **Tipo de Expressão**
+  (obrigatório, pré-preenchido pelo robô) · **Contexto** · **Marca vinculada**
+  (clientes) · notas · hashtags.
+- **Adição manual** ("✋ Adicionar manualmente"): inclui um post no tópico, marcado
+  `✋ manual`, **com prioridade** (sobe ao topo) — a via "tradicional".
+- **Filtro "Fonte"** (plataforma): TikTok ativo; Instagram/X "em breve".
 
-## Dados reais
+## Editor de relatório (`reports.html`)
 
-Autor, legenda, **thumbnail** e link são **reais**, obtidos do endpoint
-público **oEmbed** do TikTok (sem credenciais). As thumbnails são baixadas
-para `assets/thumbs/` (a URL assinada do TikTok expira e bloqueia hotlink).
+- Lê o **Workspace** curado e monta o relatório em **seções editoriais** (Capa,
+  Trending Topics, TikTok Trends, Portas de Atenção, Sessão Temática…).
+- Cada seção tem **Assuntos** (agrupam 1+ posts), no formato do bot do Telegram:
+  título · tags · Resumo · 🎯 Categoria + ✅/❌ Acionável · 💡 insight · 📊 métricas.
+- **✨ Gerar** (relatório / seção / assunto) **simula** a geração por IA
+  (texto canned) — pré-preenche e deixa editável. **Pré-visualizar** mostra o
+  layout editorial.
 
-As métricas (views/likes/comentários/shares) e a hora da coleta são
-**simuladas** — o oEmbed não as expõe — e estão marcadas como tal na interface.
-O mapeamento **post → tópico** é definido no dataset (campo `topics`).
+## Dashboard (efetividade da automação)
 
-### Adicionar posts reais
+Gráficos (SVG/CSS) dos indicadores: **aproveitamento** (curados ÷ triados),
+**acerto da pré-classificação** do robô, **funil** de triagem, aproveitamento
+**por tópico**, **robô vs manual**, **por analista**. Recorte **diário**, geral
+(todos os tópicos). Consumo do cliente está fora do escopo.
 
-Cole URLs de vídeos do TikTok e rode o ingestor:
+## Dados
+
+Autor, legenda, **thumbnail** e link são **reais** (oEmbed do TikTok, sem
+credenciais; thumbnails baixadas pra `assets/thumbs/`). Métricas e hora da coleta
+são **simuladas**. O mapa **post → tópico** vem do campo `topics` no dataset.
 
 ```bash
-python3 tools/fetch.py "https://www.tiktok.com/@usuario/video/123..."
-# ou em lote:
-python3 tools/fetch.py --file tools/seed_urls.txt
+python3 tools/fetch.py "https://www.tiktok.com/@usuario/video/123..."   # 1 URL
+python3 tools/fetch.py --file tools/seed_urls.txt                        # lote
 ```
-
-Ele atualiza `data/posts.json` e `data/posts.js` e baixa as thumbnails. O
-ingestor **não** preenche `topics` — atribua o tópico de cada post no dataset.
+Atualiza `data/posts.json` + `data/posts.js` e baixa thumbnails. **Não** preenche
+`topics` — atribua o tópico de cada post no dataset.
 
 ## Estrutura
 
 ```
-index.html          interface
-styles.css          estilo (tema escuro TikTok)
-app.js              catálogo Território▸Tópico + curadoria por tópico + persistência
-data/posts.json     dataset canônico (real + métricas simuladas + topics)
-data/posts.js       mesmo dataset embutível (para file://)
-assets/thumbs/      thumbnails reais baixadas
-tools/fetch.py      ingestor via oEmbed
-tools/seed_urls.txt URLs-semente (organizadas por tópico)
+index.html        curadoria + dashboard
+app.js            catálogos, curadoria por tópico, dashboard, persistência
+styles.css        estilo (compartilhado)
+reports.html      editor de relatório
+report.js         lógica do relatório (Assuntos + geração simulada)
+reports.css       estilo do editor/preview
+data/posts.json   dataset canônico (real + métricas simuladas + topics)
+data/posts.js     mesmo dataset embutível (file://)
+assets/thumbs/    thumbnails reais
+tools/fetch.py    ingestor via oEmbed
+DECISIONS.md      decisões e premissas (D1–D14)
+HANDOFF.md        guia para continuar o projeto
 ```
